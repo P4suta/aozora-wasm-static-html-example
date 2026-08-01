@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   --ink: #24211d;
-  --muted: #6f685e;
+  --muted: #615b53;
   --paper: #f8f5ee;
   --paper-deep: #eee8dc;
   --line: #cfc5b5;
@@ -34,6 +34,12 @@ a {
 
 a:hover {
   text-decoration-thickness: 0.14em;
+}
+
+a:focus-visible {
+  border-radius: 0.15rem;
+  outline: 3px solid var(--accent);
+  outline-offset: 0.2rem;
 }
 
 .site-header,
@@ -163,6 +169,22 @@ main {
   font-size: 0.55em;
 }
 
+.reader .aozora-gaiji {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.reader .aozora-gaiji[data-description] {
+  padding-inline: 0.12em;
+  border-bottom: 1px dotted var(--aozora-gaiji-border);
+  border-radius: 0.18em;
+  background: var(--aozora-gaiji-bg);
+  color: var(--aozora-gaiji-fg);
+}
+
 .source-information {
   margin-top: 6rem;
   padding: 2rem;
@@ -172,7 +194,9 @@ main {
 
 .source-information h2 {
   margin: 0 0 1.5rem;
-  font: 600 1rem/1.5 system-ui, sans-serif;
+  font:
+    600 1rem / 1.5 system-ui,
+    sans-serif;
   letter-spacing: 0.08em;
 }
 
@@ -252,7 +276,9 @@ main {
 
 .section-heading h2 {
   margin: 0 0 0.8rem;
-  font: 600 1rem/1.5 system-ui, sans-serif;
+  font:
+    600 1rem / 1.5 system-ui,
+    sans-serif;
   letter-spacing: 0.1em;
 }
 
@@ -300,7 +326,11 @@ main {
 
 .work-card strong {
   align-self: end;
-  font: 600 clamp(1.35rem, 4vw, 2rem)/1.4 "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
+  font:
+    600 clamp(1.35rem, 4vw, 2rem) / 1.4 "Yu Mincho",
+    "Hiragino Mincho ProN",
+    "Noto Serif JP",
+    serif;
   letter-spacing: 0.06em;
 }
 
@@ -327,7 +357,9 @@ main {
 
 .about h2 {
   margin-top: 0;
-  font: 600 1.15rem/1.5 system-ui, sans-serif;
+  font:
+    600 1.15rem / 1.5 system-ui,
+    sans-serif;
 }
 
 .about p {
@@ -353,8 +385,9 @@ main {
     flex-direction: column;
   }
 
-  .work-navigation > * {
-    text-align: left !important;
+  .work-navigation > :nth-child(2),
+  .work-navigation > :last-child {
+    text-align: left;
   }
 
   .work-grid {

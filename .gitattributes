@@ -3,5 +3,6 @@ sources/*.txt -text whitespace=cr-at-eol
 *.html text eol=lf
 *.json text eol=lf
 *.md text eol=lf
-*.mjs text eol=lf
+*.toml text eol=lf
+*.ts text eol=lf
 *.yml text eol=lf
