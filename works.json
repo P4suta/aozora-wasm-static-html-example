@@ -1,0 +1,133 @@
+{
+  "metadataSource": {
+    "url": "https://www.aozora.gr.jp/index_pages/list_person_all_extended_utf8.zip",
+    "snapshotDate": "2026-08-01",
+    "retrievedDate": "2026-08-02",
+    "sha256": "f7bdd87ee4fd4cf668373db5bbb531eb1b7dc6444f0f6250f951a357017c1f85"
+  },
+  "works": [
+    {
+      "id": "000005",
+      "title": "あいびき",
+      "reading": "あいびき",
+      "copyright": "なし",
+      "contributors": [
+        { "role": "著者", "name": "イワン・ツルゲーネフ" },
+        { "role": "翻訳者", "name": "二葉亭四迷" }
+      ],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000005/card5.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000005/files/5_ruby_21311.zip",
+      "archiveFilename": "aibiki.txt",
+      "archiveSha256": "15f4b220cde04ba26cd2349f76227a131c3e7545c2554af86aedd9dbad965858",
+      "sourceSha256": "b553492cd929ea3aed66a170bf4083524d8f864bb26c5dce9718880fd6d5219d"
+    },
+    {
+      "id": "000092",
+      "title": "蜘蛛の糸",
+      "reading": "くものいと",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "芥川竜之介" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000879/card92.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000879/files/92_ruby_164.zip",
+      "archiveFilename": "kumono_ito.txt",
+      "archiveSha256": "3b9990dc830f79346242db7f37969a1c2c7dbb7fb9abe9915e8c89c83f8628c9",
+      "sourceSha256": "581d1ee699d1ba68b046ea3961cd78303bcff98d354897599ecaa185b0e548b1"
+    },
+    {
+      "id": "001567",
+      "title": "走れメロス",
+      "reading": "はしれメロス",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "太宰治" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000035/card1567.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000035/files/1567_ruby_4948.zip",
+      "archiveFilename": "hashire_merosu.txt",
+      "archiveSha256": "7f533fd6085370c83c5f7960329b7afb62dce1003960f500a3edf9ede673a50e",
+      "sourceSha256": "a2f4e00452a7c21875bed9af1f0dc47da78e4c7b1d2a2b0cc36a7a89ab677c0f"
+    },
+    {
+      "id": "000470",
+      "title": "セロ弾きのゴーシュ",
+      "reading": "セロひきのゴーシュ",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "宮沢賢治" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000081/card470.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000081/files/470_ruby_3987.zip",
+      "archiveFilename": "serohikino_goshu.txt",
+      "archiveSha256": "aacb6f6508dae889378522209627d64527e71b8c49e9483d5e33066c0ac9d4d4",
+      "sourceSha256": "9502bf449cd682f27c392ea29ca04f1c6788341a722ef3a7d438f0f027418404"
+    },
+    {
+      "id": "042618",
+      "title": "桜の森の満開の下",
+      "reading": "さくらのもりのまんかいのした",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "坂口安吾" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/001095/card42618.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/001095/files/42618_ruby_21052.zip",
+      "archiveFilename": "sakurano_morino_mankaino.txt",
+      "archiveSha256": "62ad9835c234c1a3cbd1823dae16f49e3b055792d043292dd12df0f4a8242672",
+      "sourceSha256": "ef2e5d9355e40e3876527ca8f54d08b6f10231b924d92b09515ff2cdaee7d051"
+    },
+    {
+      "id": "000637",
+      "title": "手袋を買いに",
+      "reading": "てぶくろをかいに",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "新美南吉" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000121/card637.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000121/files/637_ruby_4095.zip",
+      "archiveFilename": "tebukuroo_kaini.txt",
+      "archiveSha256": "012d58a394654cda6eb63c90ab730e457a4aa3b196cc5f5d163e18da3e41a7ac",
+      "sourceSha256": "117072833ccd11ba03958be558dac2ad3b32258911dcc84f6404b6f04e568511"
+    },
+    {
+      "id": "000799",
+      "title": "夢十夜",
+      "reading": "ゆめじゅうや",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "夏目漱石" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000148/card799.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000148/files/799_ruby_6024.zip",
+      "archiveFilename": "yume_juya.txt",
+      "archiveSha256": "bbcba67c68db31aca5d24d8cab5ec17a1c85f9730b183f14895bb0b6d5ae19b8",
+      "sourceSha256": "3e71a09047500381e8f1fd06ea482f7eb7975599d11b725444e0b98a67ead226"
+    },
+    {
+      "id": "000689",
+      "title": "山椒大夫",
+      "reading": "さんしょうだゆう",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "森鴎外" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000129/card689.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000129/files/689_ruby_23256.zip",
+      "archiveFilename": "sanshodayu.txt",
+      "archiveSha256": "ae27a9ddebdc7fa2f9c05de9c9a6dc6b3b58f9ec8aac6ceb9bab1b993482fc35",
+      "sourceSha256": "19fe76637909c2036960e10685bcefbffeadb1b9888cea0bbe20130beee8a7eb"
+    },
+    {
+      "id": "000211",
+      "title": "一房の葡萄",
+      "reading": "ひとふさのぶどう",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "有島武郎" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000025/card211.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000025/files/211_ruby_20471.zip",
+      "archiveFilename": "hitofusano_budo.txt",
+      "archiveSha256": "8bc47028ba11639e068fd4796f36c2232a1cda268dda1f475279dee66a5d6d4b",
+      "sourceSha256": "203ce1e51f106bdda7241e1cab56982017ca36dc29d024e589d5009701524b1e"
+    },
+    {
+      "id": "043754",
+      "title": "注文の多い料理店",
+      "reading": "ちゅうもんのおおいりょうりてん",
+      "copyright": "なし",
+      "contributors": [{ "role": "著者", "name": "宮沢賢治" }],
+      "cardUrl": "https://www.aozora.gr.jp/cards/000081/card43754.html",
+      "archiveUrl": "https://www.aozora.gr.jp/cards/000081/files/43754_ruby_17594.zip",
+      "archiveFilename": "chumonno_oi_ryoriten.txt",
+      "archiveSha256": "b129a08c52941ca4916854100e58829218abb1243a99d23be90a71790fc3117a",
+      "sourceSha256": "20a2f0a5cae37b8c093bcef2e1127b8d5116e922f9c0616e05b9f89205978b5a"
+    }
+  ]
+}
