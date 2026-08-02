@@ -10,7 +10,7 @@
 - wheel/sdistとPython worker
 - Go SDK tarとGo worker
 
-bundle内の `artifacts.json` は各実artifactのSHA-256、同じexpected version/schema、worker commandを記録します。workerが別のdistributionを内部で呼ぶ構成は禁止です。
+bundle内の `artifacts.json` は各実artifactのSHA-256、adapter実行物の`supportPaths` SHA-256、同じexpected version/schema、worker commandを記録します。workerが別のdistributionを内部で呼ぶ構成は禁止です。
 
 再利用可能workflowへの入力artifactは次の固定形式です。tarで包むことで、GitHub artifact転送でnative executableの実行bitを失いません。
 

@@ -16,6 +16,8 @@ pub struct EngineArtifact {
     pub command: Vec<String>,
     pub artifact_path: PathBuf,
     pub sha256: String,
+    #[serde(default)]
+    pub support_paths: BTreeMap<PathBuf, String>,
     pub expected_version: String,
     pub expected_schema_version: u32,
     #[serde(default = "default_timeout_ms")]
@@ -112,6 +114,12 @@ pub fn load_manifest(root: &Path, option: Option<&Path>) -> Result<Option<Artifa
         }
         validate_digest(&artifact.sha256, "artifact sha256")?;
         artifact.artifact_path = parent.join(&artifact.artifact_path);
+        let mut support_paths = BTreeMap::new();
+        for (support_path, digest) in &artifact.support_paths {
+            validate_digest(digest, "support artifact sha256")?;
+            support_paths.insert(parent.join(support_path), digest.clone());
+        }
+        artifact.support_paths = support_paths;
     }
     Ok(Some(ArtifactManifest {
         path,
@@ -132,7 +140,18 @@ pub fn verify_artifact(engine: Engine, artifact: &EngineArtifact) -> Result<()> 
         &bytes,
         &artifact.sha256,
         &format!("{engine} artifact {}", artifact.artifact_path.display()),
-    )
+    )?;
+    for (path, expected) in &artifact.support_paths {
+        let bytes = fs::read(path).with_context(|| {
+            format!("{engine} support artifact unavailable: {}", path.display())
+        })?;
+        verify_digest(
+            &bytes,
+            expected,
+            &format!("{engine} support artifact {}", path.display()),
+        )?;
+    }
+    Ok(())
 }
 
 pub fn environment_command(engine: Engine) -> Result<Option<Vec<String>>> {
@@ -150,9 +169,14 @@ pub fn environment_command(engine: Engine) -> Result<Option<Vec<String>>> {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::{Result, bail};
+    use std::fs;
+    use std::path::Path;
 
-    use super::{sha256, verify_digest};
+    use anyhow::{Result, bail};
+    use tempfile::tempdir;
+
+    use super::{load_manifest, sha256, verify_artifact, verify_digest};
+    use crate::model::Engine;
 
     #[test]
     fn digest_is_stable_and_mismatch_is_explicit() -> Result<()> {
@@ -164,6 +188,44 @@ mod tests {
         let message = error.to_string();
         assert!(message.contains("expected"));
         assert!(message.contains("received"));
+        Ok(())
+    }
+
+    #[test]
+    fn support_artifact_tampering_fails_closed() -> Result<()> {
+        let directory = tempdir()?;
+        fs::write(directory.path().join("distribution"), b"distribution")?;
+        fs::write(directory.path().join("adapter"), b"adapter")?;
+        let manifest = serde_json::json!({
+            "schemaVersion": 1,
+            "aozoraCommit": "a".repeat(40),
+            "engines": {
+                "rust": {
+                    "command": ["adapter"],
+                    "artifactPath": "distribution",
+                    "sha256": sha256("distribution"),
+                    "supportPaths": { "adapter": sha256("adapter") },
+                    "expectedVersion": "1.0.0",
+                    "expectedSchemaVersion": 3
+                }
+            }
+        });
+        fs::write(
+            directory.path().join("artifacts.json"),
+            serde_json::to_vec(&manifest)?,
+        )?;
+        let loaded = load_manifest(directory.path(), Some(Path::new("artifacts.json")))?
+            .ok_or_else(|| anyhow::anyhow!("manifest missing"))?;
+        let artifact = loaded
+            .engines
+            .get(&Engine::Rust)
+            .ok_or_else(|| anyhow::anyhow!("Rust artifact missing"))?;
+        verify_artifact(Engine::Rust, artifact)?;
+        fs::write(directory.path().join("adapter"), b"tampered")?;
+        let Err(error) = verify_artifact(Engine::Rust, artifact) else {
+            bail!("tampered support artifact must fail");
+        };
+        assert!(error.to_string().contains("SHA-256 mismatch"));
         Ok(())
     }
 }

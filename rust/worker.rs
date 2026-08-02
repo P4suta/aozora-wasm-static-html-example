@@ -184,6 +184,7 @@ impl Drop for Worker {
 
 #[cfg(all(test, unix))]
 mod tests {
+    use std::collections::BTreeMap;
     use std::path::{Path, PathBuf};
 
     use anyhow::{Result, bail};
@@ -197,6 +198,7 @@ mod tests {
             command: Vec::new(),
             artifact_path: PathBuf::new(),
             sha256: "0".repeat(64),
+            support_paths: BTreeMap::new(),
             expected_version: version.into(),
             expected_schema_version: 3,
             timeout_ms,

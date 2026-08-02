@@ -6,6 +6,9 @@
       "command": ["./workers/rust-worker"],
       "artifactPath": "./candidates/aozora-0.0.0.crate",
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "supportPaths": {
+        "./workers/rust-worker": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
       "expectedVersion": "0.0.0+candidate",
       "expectedSchemaVersion": 3,
       "timeoutMs": 30000
