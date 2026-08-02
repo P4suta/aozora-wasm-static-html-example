@@ -45,21 +45,36 @@ fn split_body(source: &str) -> Result<String> {
             (line.len() >= 20 && line.bytes().all(|byte| byte == b'-')).then_some(index)
         })
         .collect();
-    if separators.len() != 2 {
-        bail!(
-            "expected exactly two legend separators, found {}",
-            separators.len()
-        );
-    }
     let bibliography = lines
         .iter()
         .enumerate()
         .rev()
-        .find_map(|(index, line)| {
-            (index > separators[1] && line.starts_with("底本：")).then_some(index)
-        })
+        .find_map(|(index, line)| line.starts_with("底本：").then_some(index))
         .context("missing terminal bibliography beginning with 底本：")?;
-    let mut body = &lines[separators[1] + 1..bibliography];
+    let body_start = match separators.as_slice() {
+        [] => {
+            let header_start = lines
+                .iter()
+                .position(|line| !line.trim().is_empty())
+                .context("source has no title header")?;
+            let header_end = lines[header_start..bibliography]
+                .iter()
+                .position(|line| line.trim().is_empty())
+                .map(|offset| header_start + offset)
+                .context("legacy source has no blank line after its title header")?;
+            lines[header_end..bibliography]
+                .iter()
+                .position(|line| !line.trim().is_empty())
+                .map(|offset| header_end + offset)
+                .context("legacy source has no body after its title header")?
+        }
+        [_] => bail!("source has an unmatched legend separator"),
+        [_, second, ..] => second + 1,
+    };
+    if body_start >= bibliography {
+        bail!("source body starts after its terminal bibliography");
+    }
+    let mut body = &lines[body_start..bibliography];
     while body.first().is_some_and(|line| line.trim().is_empty()) {
         body = &body[1..];
     }
@@ -117,7 +132,11 @@ fn features(source: &str) -> BTreeSet<&'static str> {
 fn quick(editions: &[Edition]) -> Result<Vec<Edition>> {
     let mut candidates: Vec<(Edition, BTreeSet<&'static str>)> = editions
         .iter()
-        .map(|edition| Ok((edition.clone(), features(&source_body(edition)?))))
+        .map(|edition| {
+            let source = source_body(edition)
+                .with_context(|| format!("prepare {} source body", edition.edition_id))?;
+            Ok((edition.clone(), features(&source)))
+        })
         .collect::<Result<_>>()?;
     candidates.sort_by(|left, right| left.0.edition_id.cmp(&right.0.edition_id));
     let mut uncovered: BTreeSet<&str> = candidates
@@ -452,5 +471,13 @@ mod tests {
         assert!(shard(Some("3/3")).is_err());
         let source = "題\n--------------------\n凡例\n--------------------\n\n本文\n\n底本：本\n";
         assert_eq!(split_body(source).ok().as_deref(), Some("本文"));
+        let horizontal_rule = "題\n--------------------\n凡例\n--------------------\n本文\n--------------------\n備考\n底本：本\n";
+        assert_eq!(
+            split_body(horizontal_rule).ok().as_deref(),
+            Some("本文\n--------------------\n備考")
+        );
+        let legacy = "題\n著者\n\n本文\n\n底本：本\n";
+        assert_eq!(split_body(legacy).ok().as_deref(), Some("本文"));
+        assert!(split_body("題\n--------------------\n本文\n底本：本\n").is_err());
     }
 }
