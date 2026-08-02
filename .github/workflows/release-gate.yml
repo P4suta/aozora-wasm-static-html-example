@@ -105,6 +105,7 @@ jobs:
         working-directory: lab
         env:
           AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
+          AOZORA_COMMIT: ${{ github.sha }}
         run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -162,6 +163,7 @@ jobs:
         working-directory: lab
         env:
           AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
+          AOZORA_COMMIT: ${{ github.sha }}
         run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar --baseline-archive _inputs/baseline/site.tar
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:

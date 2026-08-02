@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use anyhow::{Context, Result, bail};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::artifacts::{
     ArtifactManifest, environment_command, load_manifest, sha256, verify_artifact, verify_digest,
@@ -21,6 +21,17 @@ use crate::worker::Worker;
 struct DiagnosticsBaseline {
     schema_version: u32,
     corpus_manifest_sha256: String,
+    entries: BTreeMap<String, Vec<Diagnostic>>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct DiagnosticsSnapshot {
+    schema_version: u32,
+    corpus_manifest_sha256: String,
+    aozora_commit: String,
+    engine_version: String,
+    engine_schema_version: u32,
     entries: BTreeMap<String, Vec<Diagnostic>>,
 }
 
@@ -421,6 +432,72 @@ pub fn run(
         aozora_commit: manifest.map(|value| value.aozora_commit),
         works,
     })
+}
+
+pub fn bootstrap_diagnostics(
+    options: &VerifyOptions<'_>,
+    out: &Path,
+    mut progress: impl FnMut(&str),
+) -> Result<()> {
+    if options.scope != Scope::Full || options.shard.is_some() {
+        bail!("diagnostics bootstrap requires the full unsharded corpus");
+    }
+    let loaded = corpus::load(options.root, options.corpus)?;
+    if !loaded.rights_filtered {
+        bail!("diagnostics bootstrap requires a rights-filtered corpus manifest");
+    }
+    let manifest = load_manifest(options.root, options.artifacts)?
+        .context("diagnostics bootstrap requires a pinned artifact manifest")?;
+    let mut workers = commands(options.root, options.engine, Some(&manifest), true)?;
+    let engines: Vec<Engine> = workers.iter().map(Worker::engine).collect();
+    let canonical_engine = if options.engine == EngineSelector::All {
+        Engine::Wasm
+    } else {
+        *engines.first().context("no engines selected")?
+    };
+    let mut entries = BTreeMap::new();
+    let mut engine_version = None;
+    let mut engine_schema_version = None;
+    for edition in loaded.editions {
+        progress(&edition.edition_id);
+        let source = source_body(&edition)?;
+        let mut outputs = BTreeMap::new();
+        for worker in &mut workers {
+            outputs.insert(worker.engine(), worker.render(&source)?);
+        }
+        let canonical = outputs
+            .get(&canonical_engine)
+            .with_context(|| format!("{} canonical output is missing", edition.edition_id))?;
+        for (engine, output) in &outputs {
+            if *engine != canonical_engine {
+                assert_parity(&edition.edition_id, *engine, canonical, output)?;
+            }
+        }
+        if engine_version.get_or_insert_with(|| canonical.version.clone()) != &canonical.version
+            || *engine_schema_version.get_or_insert(canonical.schema_version)
+                != canonical.schema_version
+        {
+            bail!("engine version/schema changed during diagnostics bootstrap");
+        }
+        entries.insert(edition.edition_id, canonical.diagnostics.clone());
+    }
+    let snapshot = DiagnosticsSnapshot {
+        schema_version: 1,
+        corpus_manifest_sha256: loaded.manifest_sha256,
+        aozora_commit: manifest.aozora_commit,
+        engine_version: engine_version.context("diagnostics bootstrap selected no editions")?,
+        engine_schema_version: engine_schema_version
+            .context("diagnostics bootstrap selected no editions")?,
+        entries,
+    };
+    if let Some(parent) = out.parent() {
+        fs::create_dir_all(parent)
+            .with_context(|| format!("create diagnostics directory {}", parent.display()))?;
+    }
+    let mut bytes = serde_json::to_vec_pretty(&snapshot)?;
+    bytes.push(b'\n');
+    fs::write(out, bytes).with_context(|| format!("write {}", out.display()))?;
+    Ok(())
 }
 
 impl Worker {

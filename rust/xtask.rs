@@ -38,15 +38,32 @@ struct ReleaseArgs {
 enum ReleaseTask {
     Prepare(PrepareArgs),
     Verify(VerifyArgs),
+    BootstrapDiagnostics(BootstrapDiagnosticsArgs),
     Build(BuildArgs),
     Visual(VisualArgs),
     AssertResults(AssertResultsArgs),
 }
 
 #[derive(Debug, Args)]
+struct BootstrapDiagnosticsArgs {
+    #[arg(long, default_value = ".")]
+    root: PathBuf,
+    #[arg(long, value_enum, default_value = "wasm")]
+    engine: EngineSelector,
+    #[arg(long, default_value = "corpus/manifest.json")]
+    corpus: PathBuf,
+    #[arg(long, default_value = "candidates/artifacts.json")]
+    artifacts: PathBuf,
+    #[arg(long, default_value = "bootstrap/diagnostics-baseline.json")]
+    out: PathBuf,
+}
+
+#[derive(Debug, Args)]
 struct PrepareArgs {
     #[arg(long)]
     lab_commit: Option<String>,
+    #[arg(long)]
+    aozora_commit: Option<String>,
     #[arg(long, default_value = ".")]
     root: PathBuf,
     #[arg(long)]
@@ -193,6 +210,22 @@ fn prepare(args: &PrepareArgs) -> Result<()> {
     unpack(&args.root, &args.candidate_archive, Path::new("candidates"))?;
     require_file(&args.root, Path::new("corpus/manifest.json"))?;
     require_file(&args.root, Path::new("candidates/artifacts.json"))?;
+    let expected_aozora = args
+        .aozora_commit
+        .clone()
+        .or_else(|| std::env::var("AOZORA_COMMIT").ok());
+    if let Some(expected) = &expected_aozora {
+        commit(expected)?;
+        let bytes = fs::read(args.root.join("candidates/artifacts.json"))?;
+        let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
+        if manifest
+            .get("aozoraCommit")
+            .and_then(serde_json::Value::as_str)
+            != Some(expected)
+        {
+            bail!("candidate bundle was built for a different aozora commit");
+        }
+    }
     if let Some(archive) = &args.baseline_archive {
         unpack(&args.root, archive, Path::new("baseline"))?;
         require_file(&args.root, Path::new("baseline/index.html"))?;
@@ -249,6 +282,28 @@ fn verify(args: &VerifyArgs) -> Result<()> {
         report.engines.len(),
         report.works.len(),
         report.shard
+    );
+    Ok(())
+}
+
+fn bootstrap_diagnostics(args: &BootstrapDiagnosticsArgs) -> Result<()> {
+    verify::bootstrap_diagnostics(
+        &VerifyOptions {
+            root: &args.root,
+            engine: args.engine,
+            scope: Scope::Full,
+            shard: None,
+            corpus: Some(&args.corpus),
+            artifacts: Some(&args.artifacts),
+            diagnostics_baseline: None,
+            require_rights_filtered: true,
+        },
+        &args.root.join(&args.out),
+        |message| eprintln!("bootstrap diagnostics {message}"),
+    )?;
+    println!(
+        "diagnostics bootstrap candidate written to {}",
+        args.out.display()
     );
     Ok(())
 }
@@ -426,6 +481,7 @@ fn execute(task: Task) -> Result<()> {
         Task::Release(args) => match args.command {
             ReleaseTask::Prepare(args) => prepare(&args),
             ReleaseTask::Verify(args) => verify(&args),
+            ReleaseTask::BootstrapDiagnostics(args) => bootstrap_diagnostics(&args),
             ReleaseTask::Build(args) => build(&args),
             ReleaseTask::Visual(args) => visual(&args),
             ReleaseTask::AssertResults(args) => assert_results(&args),

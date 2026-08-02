@@ -54,4 +54,6 @@ Pages用buildはLinux候補で全engineのunsharded verificationを再実行し�
 
 最初のrights-filtered releaseだけは、全作品のdiagnosticsをbootstrap候補として生成し、corpus SHA・全entry・既知diagnosticsをレビューしてから`diagnostics_artifact`へ固定します。空baselineへの自動置換や、失敗jobからのbaseline採用は行いません。
 
+bootstrap候補は固定済みcorpusとcandidate bundleを展開した後、`cargo run --locked --bin xtask -- release bootstrap-diagnostics --engine all`で生成します。このコマンドは全作品・全指定engineのparityを先に証明し、全edition（diagnosticsが空の作品を含む）を列挙したreview用JSONだけを書きます。通常の`release verify`はこのコマンドを呼ばず、承認済みbaselineがなければ失敗します。
+
 このリポジトリの `lab/artifacts.json` は開発用WASM候補だけを固定しています。7面の正式artifact manifestは `aozora` 側release-readyが生成し、このリポジトリへcommitしません。
