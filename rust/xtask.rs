@@ -178,7 +178,8 @@ fn unpack(root: &Path, archive: &Path, destination: &Path) -> Result<()> {
             destination.display()
         );
     }
-    fs::create_dir(&destination).with_context(|| format!("create {}", destination.display()))?;
+    fs::create_dir_all(&destination)
+        .with_context(|| format!("create {}", destination.display()))?;
     let file = File::open(&archive).with_context(|| format!("open {}", archive.display()))?;
     tar::Archive::new(file)
         .unpack(&destination)
@@ -537,12 +538,23 @@ mod tests {
         builder.append_data(&mut header, "manifest.json", &bytes[..])?;
         builder.finish()?;
 
-        unpack(root.path(), Path::new("input.tar"), Path::new("output"))?;
+        unpack(
+            root.path(),
+            Path::new("input.tar"),
+            Path::new("nested/output"),
+        )?;
         assert_eq!(
-            fs::read_to_string(root.path().join("output/manifest.json"))?,
+            fs::read_to_string(root.path().join("nested/output/manifest.json"))?,
             "{}\n"
         );
-        assert!(unpack(root.path(), Path::new("input.tar"), Path::new("output")).is_err());
+        assert!(
+            unpack(
+                root.path(),
+                Path::new("input.tar"),
+                Path::new("nested/output")
+            )
+            .is_err()
+        );
         Ok(())
     }
 }
