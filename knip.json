@@ -1,6 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["test/**/*.test.ts", "e2e/**/*.e2e.ts"],
-  "ignoreDependencies": ["sirv-cli"],
+  "entry": ["test/**/*.test.ts", "e2e/**/*.e2e.ts", "src/visual.ts", "src/workers/*.ts"],
+  "ignoreDependencies": ["@biomejs/biome", "sirv-cli"],
   "project": ["src/**/*.ts", "test/**/*.ts", "e2e/**/*.ts", "*.ts"]
 }

@@ -1,90 +1,93 @@
-# aozora-wasm static HTML example
+# aozora real-work distribution verification lab
 
-[`aozora-wasm`](https://www.npmjs.com/package/aozora-wasm)をビルド時に使い、
-青空文庫のUTF-8テキストから静的な読書ページを生成するTypeScript製のconsumer例です。
-ブラウザへJavaScriptを配信せず、生成済みHTMLとCSSだけをGitHub Pagesで公開します。
+権利判定済みの青空文庫実作品を使い、`aozora` の7配布面を同じ入力・同じschemaで比較する静的サイト兼リリースゲートです。検証とサイト生成の中核はRust製の `lab` CLI、WASM hostとブラウザ検証はTypeScriptで実装しています。公開ページへクライアントJavaScriptは配信しません。
 
-- [公開デモ](https://p4suta.github.io/aozora-wasm-static-html-example/)
-- [ビルド結果と入力ハッシュ](https://p4suta.github.io/aozora-wasm-static-html-example/build-report.json)
+- [公開サイト](https://p4suta.github.io/aozora-wasm-static-html-example/)
+- [公開サイトのビルドレポート](https://p4suta.github.io/aozora-wasm-static-html-example/build-report.json)
 
-## 境界
+## 現在の境界
 
-このRepoは青空文庫の検索・メタデータ更新・配信サービスを再実装しません。
-作品ファイルを「先頭書誌・記号凡例・本文・底本情報」に分け、本文だけを
-`aozora-wasm`へ渡し、返されたsemantic HTML断片を完全なHTML5ページへ
-組み立てます。
+リポジトリ内の `works.json` と10作品は開発用legacy corpusです。実作品でquick/full、決定性、静的出力を検証できますが、初出年と全関係者の権利根拠を備えた正式なrights-filtered manifestではありません。`lab full` と正式公開ジョブは `--require-rights-filtered` により、このlegacy入力を必ず拒否します。
 
-青空文庫記法のルビ、外字、注記は事前のテキスト置換を行いません。
-ファイル外枠の分離とページ構築はconsumer、本文記法の解釈はparserの責務です。
+正式ゲートには、別リポジトリ `P4suta/aozora-rights-filtered-corpus` が生成する固定commitのmanifestとUTF-8本文を `--corpus` で渡します。manifest contractは[corpus-manifest-v1](docs/corpus-manifest-v1.md)にあります。
+
+## なぜRustか
+
+検証中核にはGoではなくRustを採用しました。`aozora` 本体とwire schemaがRustで定義されているため変更追従が容易で、Rust配布面に余分なC ABI/cgo境界を増やさず、Linux・macOS・Windowsへ同一のnative CLIを配布できます。Go SDKは検証対象の1配布面として独立workerに保ちます。
+
+各配布面はversioned JSONL workerとして起動され、1作品ごとに次の `EngineResult` を返します。
+
+- `version` / `schemaVersion`
+- semantic HTML
+- diagnostics / gaiji / nodes / pairs / container-pairs
+- `to_source` round-trip
+
+`all` はWASMを正本とし、全fieldをbyte単位で比較します。workerの欠落、artifact hash不一致、異版混在、不正JSON、余分なfield、停止、timeout、出力差はすべてfail-closedです。CLI固有の末尾改行は各workerがpayloadへ入れる前に処理し、Rust transportはJSONL framing以外を変更しません。protocolの詳細は[worker-protocol-v1](docs/worker-protocol-v1.md)を参照してください。
 
 ## 開発
 
-[Bun 1.3.14](https://bun.sh/)をパッケージ管理、TypeScript実行、テスト、
-カバレッジに使用します。依存は完全版番号と`bun.lock`で固定し、新規公開から
-3日未満のパッケージをインストール対象から除外しています。
+Bun 1.3.14とRust 1.97.1を固定しています。
 
 ```sh
 bun install --frozen-lockfile
-bun run ci
+bun run check
 ```
 
-主な個別コマンドは次のとおりです。
+主なコマンドは次のとおりです。
 
 | コマンド | 内容 |
 | --- | --- |
-| `bun run build` | `dist/`を一時ディレクトリで生成して原子的に置換 |
-| `bun test` | manifest、外枠分離、HTML、決定性の単体・統合テスト |
-| `bun run typecheck` | TypeScriptのstrict検査 |
-| `bun run lint` | Biomeによる静的解析 |
-| `bun run dead-code` | Knipによる未使用コード・依存検査 |
-| `bun run e2e` | Chromium、Playwright、axeによる表示・アクセシビリティ検査 |
+| `bun run lab` | 引数なしの決定的なWASM quick検証 |
+| `bun run lab doctor --engine all` | host tool、worker、候補artifactとSHA-256を検査 |
+| `bun run lab verify --engine wasm --scope quick` | 特徴集合をgreedy coverする実作品quick検証 |
+| `bun run lab verify --engine all --scope full --shard 0/4` | 全配布面・全作品のshard検証 |
+| `bun run lab build --engine wasm` | 検証後に静的サイトを原子的に生成 |
+| `bun run lab visual --baseline PATH --candidate PATH` | 3 browser × 狭幅/広幅の画像・layout比較 |
+| `bun run lab full --baseline PATH --corpus PATH` | rights-filtered corpusに対するhost上の全工程 |
+| `bun run xtask release ...` | artifact展開、release shard、Pages候補、fan-inをRustで編成 |
 
-`dist/`には索引、10作品の`{作品ID}.utf8.html`、UTF-8原文、
-`build-report.json`が生成されます。同じ入力から二度生成した全ファイルのSHA-256が
-一致することをテストしています。通常ビルドはネットワークへ接続しません。
+外部workerは `lab/artifacts.json` に固定します。ローカル開発時だけ `AOZORA_LAB_RUST_WORKER='["./worker"]'` のようなJSON command arrayで上書きできます。正式ゲートはrelease-readyが生成した同一commitのartifactとmanifestを使い、overrideを使いません。
 
-入力manifestとCSS provenanceはZodのstrict schemaで検証します。UTF-8は不正byteを
-置換せず拒否し、作品ID、URL、権利表示、重複、入力hash、vendor CSSのhashをビルド前に
-検査します。生成先は成功時だけ入れ替えるため、失敗したビルドが既存の`dist/`を
-半端な状態にしません。
+現在の固定npm/WASMを使った例:
 
-入力は青空文庫公式のShift_JIS ZIPをUTF-8へ復号しただけのスナップショットです。
-`works.json`に公式作品カード、ZIP URL、権利表示、取得日、ZIPとUTF-8本文の
-SHA-256を記録しています。Unicode正規化、外字置換、本文修正は行っていません。
+```sh
+bun run lab doctor --engine wasm
+bun run lab verify --engine wasm --scope full
+bun run lab build --engine wasm
+```
 
-## CSS
+## 検証規則
 
-`vendor/aozora-notation.css`は`aozora`の任意標準スタイルシートの固定コピーです。
-出典コミットとSHA-256は`vendor/aozora-notation.json`に記録しています。
-この資産がnpm版へ同梱された後は、npmパッケージからコピーする構成へ移行します。
+quick corpusは本文中のruby、外字、注記、container、range styleを決定的に抽出し、集合を覆う最小寄りの作品集合をedition IDでtie-breakして選びます。fullはmanifestの全版を処理します。`--shard i/n` は選択後の安定した順序へ適用するため、ローカルとCIが同じ分割規則を共有します。
 
-解決できた外字は通常のUnicode文字として本文と同じ色・背景で表示します。原文を
-失わず表示する未解決外字だけを識別可能な装飾にするため、このサイト固有のCSSを
-標準スタイルシートの後に適用しています。
+diagnosticsは `lab/diagnostics-baseline.json` と構造比較します。追加・変形は失敗し、解消だけを改善としてreportへ残します。baselineの自動更新やwildcard承認はありません。
 
-## 公開版の既知境界
+visual検証は同一browser process内でbaseline/candidateを開き、各作品について決定的なcontact sheetと本文全DOMのcomputed style、位置、寸法、改行rect、overflow、ruby配置を比較します。candidateにはaxeも実行します。差分画像は失敗時だけ保存されます。意図した変更は、影響editionの完全な一覧、before/after Merkle root、理由、issueを含む承認manifestと完全一致した場合だけ受理されます。
 
-現在はnpmで公開されている`aozora-wasm@0.5.0`を使用します。この版では「蜘蛛の糸」の
-`犍陀多《かんだた》`で、外字から解決した「犍」がruby baseの外側に残ります。
-このRepoはconsumer側で記法の意味を補正せず、version別のunit testとbrowser testで
-挙動を固定しています。修正は`aozora`本体の
-[P4suta/aozora#625](https://github.com/P4suta/aozora/pull/625)に含まれており、
-公開版を更新した時点でtestはruby base全体が「犍陀多」であることを要求します。
+## 静的出力
 
-## 継続的検証
+`lab build` は検証がすべて通った後だけ一時directoryを置換し、失敗時は既存の `dist/` を保ちます。
 
-Pull Requestでは型、format、lint、カバレッジ、dead code、決定性、HTML構文、
-ブラウザ表示、アクセシビリティ、dependency review、CodeQLを検査します。
-DependabotはBun依存とGitHub Actionsを週次更新し、Actionsは完全なcommit SHAで
-固定しています。脆弱性は[Security policy](.github/SECURITY.md)から非公開で報告できます。
+- `/works/{editionId}.html`
+- `/sources/{editionId}.txt`
+- `/reports/{editionId}.json`
+- `/diagnostics-baseline.json`（次の正式版が比較する作品別diagnostics）
+- `/indexes/authors/index.html`
+- `/indexes/gojuon/index.html`
+- `/indexes/pages/{page}.html`
+- `/build-report.json`
+
+各作品ページはdiagnostics、採用根拠、公式作品カード、公式ZIP、UTF-8原文、比較report、[青空文庫収録ファイルの取り扱い規準](https://www.aozora.gr.jp/guide/kijyunn.html)を表示します。900MiBを超える場合は作品を削らずdeployを停止します。
+
+## 品質ゲート
+
+`bun run check` はBiome、TypeScript、Clippy、Rust/Bunテスト、dead-code、full static buildを実行します。Rust testは権利cutoff、著作権flag、hash、worker fail-closed、projection差、shard、静的サイトの再現性、容量失敗時の原子的保持を検査します。Playwright E2EはChromium・Firefox・WebKitで静的サイトとaccessibilityを検査します。
+
+release-readyとの接続条件とartifact配置は[release-integration](docs/release-integration.md)にあります。
+workflow内の条件分岐、tar展開、複数工程の呼び出しは`rust/xtask.rs`へ集約し、YAMLにshell scriptを持たせません。
 
 ## 出典とライセンス
 
-作品本文と書誌情報は[青空文庫](https://www.aozora.gr.jp/)に由来します。
-収録対象は公式CSVで著作権表示が「なし」の作品だけです。各生成ページから
-公式作品カード、配布ZIP、使用したUTF-8原文へ移動できます。
+作品本文と書誌情報は[青空文庫](https://www.aozora.gr.jp/)に由来します。このサイトは青空文庫および各関係者による公式サービスではなく、自動判定は日本での表示と米国でのhostingを対象にした保守的な運用基準であり、全法域への保証ではありません。
 
-このRepoは青空文庫および各関係者による公式サービスではありません。
-変換・サイト生成コードとvendorしたaozora CSSは
-Apache License 2.0またはMIT Licenseのデュアルライセンスです。
-作品本文をこれらのライセンスで再ライセンスするものではありません。
+検証・生成コードとvendorしたaozora CSSはApache License 2.0またはMIT Licenseです。作品本文をこれらのライセンスで再ライセンスするものではありません。

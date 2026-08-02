@@ -1,0 +1,209 @@
+name: real-work release gate
+
+on:
+  workflow_call:
+    inputs:
+      lab_commit:
+        description: 40-character commit SHA of this verification lab
+        required: true
+        type: string
+      candidate_artifact_prefix:
+        description: Prefix of candidate bundle artifacts (prefix-linux/macos/windows)
+        required: true
+        type: string
+      corpus_artifact:
+        description: Artifact containing corpus.tar
+        required: true
+        type: string
+      diagnostics_artifact:
+        description: Artifact containing diagnostics-baseline.json from the approved release
+        required: true
+        type: string
+      baseline_artifact:
+        description: Artifact containing the previous approved site as site.tar
+        required: true
+        type: string
+      approval_artifact:
+        description: Optional artifact containing an exact visual approval.json
+        required: false
+        default: ""
+        type: string
+    outputs:
+      pages_artifact:
+        description: Candidate static site artifact produced after every gate passes
+        value: ${{ jobs.visual.outputs.pages_artifact }}
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  verify:
+    name: ${{ matrix.platform }} ${{ matrix.shard }}/4
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            shard: 0
+          - os: ubuntu-latest
+            platform: linux
+            shard: 1
+          - os: ubuntu-latest
+            platform: linux
+            shard: 2
+          - os: ubuntu-latest
+            platform: linux
+            shard: 3
+          - os: macos-latest
+            platform: macos
+            shard: 0
+          - os: macos-latest
+            platform: macos
+            shard: 1
+          - os: macos-latest
+            platform: macos
+            shard: 2
+          - os: macos-latest
+            platform: macos
+            shard: 3
+          - os: windows-latest
+            platform: windows
+            shard: 0
+          - os: windows-latest
+            platform: windows
+            shard: 1
+          - os: windows-latest
+            platform: windows
+            shard: 2
+          - os: windows-latest
+            platform: windows
+            shard: 3
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: P4suta/aozora-wasm-static-html-example
+          ref: ${{ inputs.lab_commit }}
+          path: lab
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.corpus_artifact }}
+          path: lab/_inputs/corpus
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.diagnostics_artifact }}
+          path: lab/_inputs/diagnostics
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ format('{0}-{1}', inputs.candidate_artifact_prefix, matrix.platform) }}
+          path: lab/_inputs/candidate
+      - name: Extract immutable inputs
+        working-directory: lab
+        env:
+          AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
+        run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - name: Install lab dependencies
+        working-directory: lab
+        run: bun install --frozen-lockfile
+      - name: Verify every distribution against real works
+        working-directory: lab
+        run: cargo run --quiet --locked --bin xtask -- release verify --platform ${{ matrix.platform }} --shard ${{ matrix.shard }}/4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: real-work-report-${{ matrix.platform }}-${{ matrix.shard }}
+          path: lab/reports/${{ matrix.platform }}-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 30
+
+  visual:
+    name: all-work visual and Pages candidate
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    outputs:
+      pages-artifact: aozora-pages-candidate-${{ github.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: P4suta/aozora-wasm-static-html-example
+          ref: ${{ inputs.lab_commit }}
+          path: lab
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.corpus_artifact }}
+          path: lab/_inputs/corpus
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.diagnostics_artifact }}
+          path: lab/_inputs/diagnostics
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ format('{0}-linux', inputs.candidate_artifact_prefix) }}
+          path: lab/_inputs/candidate
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ inputs.baseline_artifact }}
+          path: lab/_inputs/baseline
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        if: inputs.approval_artifact != ''
+        with:
+          name: ${{ inputs.approval_artifact }}
+          path: lab/_inputs/approval
+      - name: Extract immutable inputs
+        working-directory: lab
+        env:
+          AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
+        run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar --baseline-archive _inputs/baseline/site.tar
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: 1.3.14
+      - name: Install lab and browser dependencies
+        working-directory: lab
+        run: bun install --frozen-lockfile
+      - name: Install browsers
+        working-directory: lab
+        run: bunx playwright install --with-deps chromium firefox webkit
+      - name: Build only after unsharded seven-engine parity
+        working-directory: lab
+        run: cargo run --quiet --locked --bin xtask -- release build
+      - name: Compare every work in all browsers
+        working-directory: lab
+        run: cargo run --quiet --locked --bin xtask -- release visual
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: real-work-visual-${{ github.sha }}
+          path: lab/visual-report
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aozora-pages-candidate-${{ github.sha }}
+          path: lab/candidate-site
+          if-no-files-found: error
+          retention-days: 7
+
+  release-ready:
+    name: real-work release gate
+    if: always()
+    needs: [verify, visual]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: P4suta/aozora-wasm-static-html-example
+          ref: ${{ inputs.lab_commit }}
+          path: lab
+          persist-credentials: false
+      - name: Require every OS, engine, work and browser
+        working-directory: lab
+        run: cargo run --quiet --locked --bin xtask -- release assert-results --verify ${{ needs.verify.result }} --visual ${{ needs.visual.result }}
