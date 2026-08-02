@@ -1,0 +1,9 @@
+[install]
+exact = true
+minimumReleaseAge = 259200
+
+[test]
+coverageSkipTestFiles = true
+coverageThreshold = { lines = 0.9, functions = 0.9, statements = 0.9 }
+coverageReporter = ["text", "lcov"]
+coveragePathIgnorePatterns = ["src/cli.ts"]
