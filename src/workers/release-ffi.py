@@ -34,12 +34,10 @@ def request(value: object) -> dict[str, Any]:
     return value
 
 
-if len(sys.argv) != 4:
-    raise SystemExit("usage: release-ffi.py <library> <version> <schema-version>")
+if len(sys.argv) != 2:
+    raise SystemExit("usage: release-ffi.py <library>")
 
 library = ctypes.CDLL(str(Path(sys.argv[1]).resolve()))
-version = sys.argv[2]
-schema_version = int(sys.argv[3])
 library.aozora_document_new.argtypes = [
     ctypes.c_void_p,
     ctypes.c_size_t,
@@ -48,6 +46,9 @@ library.aozora_document_new.argtypes = [
 library.aozora_document_new.restype = ctypes.c_int
 library.aozora_document_free.argtypes = [ctypes.c_void_p]
 library.aozora_bytes_free.argtypes = [AozoraBytes]
+library.aozora_version.argtypes = [ctypes.POINTER(AozoraBytes)]
+library.aozora_version.restype = ctypes.c_int
+library.aozora_schema_version.restype = ctypes.c_uint32
 
 projections = {
     "html": "aozora_document_to_html",
@@ -75,6 +76,17 @@ def output(document: ctypes.c_void_p, symbol: str) -> str:
         library.aozora_bytes_free(value)
 
 
+def engine_version() -> str:
+    value = AozoraBytes()
+    status = library.aozora_version(ctypes.byref(value))
+    if status != 0:
+        raise RuntimeError(f"aozora_version failed with status {status}")
+    try:
+        return ctypes.string_at(value.ptr, value.len).decode("utf-8")
+    finally:
+        library.aozora_bytes_free(value)
+
+
 def render(source: str) -> dict[str, Any]:
     encoded = source.encode("utf-8")
     buffer = ctypes.create_string_buffer(encoded)
@@ -83,7 +95,11 @@ def render(source: str) -> dict[str, Any]:
     if status != 0:
         raise RuntimeError(f"aozora_document_new failed with status {status}")
     try:
-        result: dict[str, Any] = {"version": version, "schemaVersion": schema_version}
+        schema_version = library.aozora_schema_version()
+        result: dict[str, Any] = {
+            "version": engine_version(),
+            "schemaVersion": schema_version,
+        }
         for name, symbol in projections.items():
             value = output(document, symbol)
             if name not in {"html", "source"}:
