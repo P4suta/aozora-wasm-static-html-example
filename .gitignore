@@ -1,7 +1,12 @@
 coverage/
+_inputs/
+_release/
+bootstrap/
+candidate-site/
 dist/
 node_modules/
 playwright-report/
+reports/
 test-results/
 target/
 visual-report/
