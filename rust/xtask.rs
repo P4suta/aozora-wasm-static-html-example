@@ -50,9 +50,9 @@ struct BootstrapDiagnosticsArgs {
     root: PathBuf,
     #[arg(long, value_enum, default_value = "wasm")]
     engine: EngineSelector,
-    #[arg(long, default_value = "corpus/manifest.json")]
+    #[arg(long, default_value = "_release/corpus/manifest.json")]
     corpus: PathBuf,
-    #[arg(long, default_value = "candidates/artifacts.json")]
+    #[arg(long, default_value = "_release/candidates/artifacts.json")]
     artifacts: PathBuf,
     #[arg(long, default_value = "bootstrap/diagnostics-baseline.json")]
     out: PathBuf,
@@ -82,9 +82,9 @@ struct VerifyArgs {
     platform: String,
     #[arg(long)]
     shard: String,
-    #[arg(long, default_value = "corpus/manifest.json")]
+    #[arg(long, default_value = "_release/corpus/manifest.json")]
     corpus: PathBuf,
-    #[arg(long, default_value = "candidates/artifacts.json")]
+    #[arg(long, default_value = "_release/candidates/artifacts.json")]
     artifacts: PathBuf,
     #[arg(long, default_value = "_inputs/diagnostics/diagnostics-baseline.json")]
     diagnostics_baseline: PathBuf,
@@ -96,9 +96,9 @@ struct VerifyArgs {
 struct BuildArgs {
     #[arg(long, default_value = ".")]
     root: PathBuf,
-    #[arg(long, default_value = "corpus/manifest.json")]
+    #[arg(long, default_value = "_release/corpus/manifest.json")]
     corpus: PathBuf,
-    #[arg(long, default_value = "candidates/artifacts.json")]
+    #[arg(long, default_value = "_release/candidates/artifacts.json")]
     artifacts: PathBuf,
     #[arg(long, default_value = "_inputs/diagnostics/diagnostics-baseline.json")]
     diagnostics_baseline: PathBuf,
@@ -110,7 +110,7 @@ struct BuildArgs {
 struct VisualArgs {
     #[arg(long, default_value = ".")]
     root: PathBuf,
-    #[arg(long, default_value = "baseline")]
+    #[arg(long, default_value = "_release/baseline")]
     baseline: PathBuf,
     #[arg(long, default_value = "candidate-site")]
     candidate: PathBuf,
@@ -206,17 +206,25 @@ fn prepare(args: &PrepareArgs) -> Result<()> {
         .or_else(|| std::env::var("AOZORA_LAB_COMMIT").ok())
         .context("pass --lab-commit or AOZORA_LAB_COMMIT")?;
     check_checkout(&args.root, &expected_commit)?;
-    unpack(&args.root, &args.corpus_archive, Path::new("corpus"))?;
-    unpack(&args.root, &args.candidate_archive, Path::new("candidates"))?;
-    require_file(&args.root, Path::new("corpus/manifest.json"))?;
-    require_file(&args.root, Path::new("candidates/artifacts.json"))?;
+    unpack(
+        &args.root,
+        &args.corpus_archive,
+        Path::new("_release/corpus"),
+    )?;
+    unpack(
+        &args.root,
+        &args.candidate_archive,
+        Path::new("_release/candidates"),
+    )?;
+    require_file(&args.root, Path::new("_release/corpus/manifest.json"))?;
+    require_file(&args.root, Path::new("_release/candidates/artifacts.json"))?;
     let expected_aozora = args
         .aozora_commit
         .clone()
         .or_else(|| std::env::var("AOZORA_COMMIT").ok());
     if let Some(expected) = &expected_aozora {
         commit(expected)?;
-        let bytes = fs::read(args.root.join("candidates/artifacts.json"))?;
+        let bytes = fs::read(args.root.join("_release/candidates/artifacts.json"))?;
         let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
         if manifest
             .get("aozoraCommit")
@@ -227,8 +235,8 @@ fn prepare(args: &PrepareArgs) -> Result<()> {
         }
     }
     if let Some(archive) = &args.baseline_archive {
-        unpack(&args.root, archive, Path::new("baseline"))?;
-        require_file(&args.root, Path::new("baseline/index.html"))?;
+        unpack(&args.root, archive, Path::new("_release/baseline"))?;
+        require_file(&args.root, Path::new("_release/baseline/index.html"))?;
     }
     println!("release inputs extracted from pinned archives");
     Ok(())
