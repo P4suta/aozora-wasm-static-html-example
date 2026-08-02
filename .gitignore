@@ -1,6 +1,7 @@
 coverage/
 _inputs/
 _release/
+_stable/
 bootstrap/
 candidate-site/
 dist/

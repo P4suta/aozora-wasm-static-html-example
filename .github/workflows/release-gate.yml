@@ -7,6 +7,10 @@ on:
         description: 40-character commit SHA of this verification lab
         required: true
         type: string
+      aozora_commit:
+        description: 40-character aozora commit that produced every candidate artifact
+        required: true
+        type: string
       candidate_artifact_prefix:
         description: Prefix of candidate bundle artifacts (prefix-linux/macos/windows)
         required: true
@@ -105,7 +109,7 @@ jobs:
         working-directory: lab
         env:
           AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
-          AOZORA_COMMIT: ${{ github.sha }}
+          AOZORA_COMMIT: ${{ inputs.aozora_commit }}
         run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
@@ -163,7 +167,7 @@ jobs:
         working-directory: lab
         env:
           AOZORA_LAB_COMMIT: ${{ inputs.lab_commit }}
-          AOZORA_COMMIT: ${{ github.sha }}
+          AOZORA_COMMIT: ${{ inputs.aozora_commit }}
         run: cargo run --quiet --locked --bin xtask -- release prepare --corpus-archive _inputs/corpus/corpus.tar --candidate-archive _inputs/candidate/bundle.tar --baseline-archive _inputs/baseline/site.tar
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:

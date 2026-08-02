@@ -1,4 +1,5 @@
-use std::fs::{self, File};
+use std::fs::{self, File, OpenOptions};
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -7,7 +8,8 @@ use aozora_lab::doctor;
 use aozora_lab::model::{EngineSelector, Scope, VerificationReport};
 use aozora_lab::site::{self, BuildOptions};
 use aozora_lab::verify::{self, VerifyOptions};
-use clap::{Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand, ValueEnum};
+use sha2::{Digest, Sha256};
 
 #[derive(Debug, Parser)]
 #[command(name = "xtask", about = "Repository and release orchestration")]
@@ -42,6 +44,51 @@ enum ReleaseTask {
     Build(BuildArgs),
     Visual(VisualArgs),
     AssertResults(AssertResultsArgs),
+    StableResolve(StableResolveArgs),
+    StableFetch(StableFetchArgs),
+}
+
+#[derive(Debug, Args)]
+struct StableResolveArgs {
+    #[arg(long, default_value = "P4suta/aozora")]
+    repository: String,
+    #[arg(long, default_value = "aozora-wasm")]
+    npm_package: String,
+    #[arg(long, default_value = "aozora")]
+    crate_name: String,
+    #[arg(long, default_value = "aozora")]
+    python_package: String,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
+enum StablePlatform {
+    Linux,
+    Macos,
+    Windows,
+}
+
+impl StablePlatform {
+    fn native_archive(self, version: &str) -> String {
+        match self {
+            Self::Linux => format!("aozora-v{version}-x86_64-unknown-linux-gnu.tar.gz"),
+            Self::Macos => format!("aozora-v{version}-aarch64-apple-darwin.tar.gz"),
+            Self::Windows => format!("aozora-v{version}-x86_64-pc-windows-msvc.zip"),
+        }
+    }
+}
+
+#[derive(Debug, Args)]
+struct StableFetchArgs {
+    #[arg(long, default_value = "P4suta/aozora")]
+    repository: String,
+    #[arg(long)]
+    tag: String,
+    #[arg(long)]
+    version: String,
+    #[arg(long, value_enum)]
+    platform: StablePlatform,
+    #[arg(long)]
+    out_dir: PathBuf,
 }
 
 #[derive(Debug, Args)]
@@ -140,6 +187,370 @@ fn commit(value: &str) -> Result<()> {
     {
         bail!("lab_commit must be a lowercase 40-character commit SHA");
     }
+    Ok(())
+}
+
+fn stable_version(value: &str) -> Result<()> {
+    let parts = value.split('.').collect::<Vec<_>>();
+    if parts.len() != 3
+        || parts
+            .iter()
+            .any(|part| part.is_empty() || !part.bytes().all(|byte| byte.is_ascii_digit()))
+    {
+        bail!("stable version must have numeric X.Y.Z form");
+    }
+    Ok(())
+}
+
+fn repository(value: &str) -> Result<()> {
+    let Some((owner, name)) = value.split_once('/') else {
+        bail!("repository must have owner/name form");
+    };
+    if owner.is_empty()
+        || name.is_empty()
+        || !owner
+            .bytes()
+            .chain(name.bytes())
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        bail!("repository contains unsupported characters");
+    }
+    Ok(())
+}
+
+fn output(command: &mut Command, label: &str) -> Result<String> {
+    let output = command.output().with_context(|| format!("start {label}"))?;
+    if !output.status.success() {
+        bail!(
+            "{label} failed with {}: {}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr).trim()
+        );
+    }
+    String::from_utf8(output.stdout)
+        .with_context(|| format!("{label} emitted non-UTF-8 output"))
+        .map(|value| value.trim().to_owned())
+}
+
+fn run_command(command: &mut Command, label: &str) -> Result<()> {
+    let status = command.status().with_context(|| format!("start {label}"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        bail!("{label} failed with {status}")
+    }
+}
+
+fn curl_json(url: &str, label: &str) -> Result<serde_json::Value> {
+    let bytes = output(
+        Command::new("curl").args([
+            "--fail",
+            "--silent",
+            "--show-error",
+            "--location",
+            "--header",
+            "User-Agent: aozora-real-work-lab/0.1",
+            url,
+        ]),
+        label,
+    )?;
+    serde_json::from_str(&bytes).with_context(|| format!("decode {label}"))
+}
+
+fn append_output(name: &str, value: &str) -> Result<()> {
+    if value.contains('\n') || value.contains('\r') {
+        bail!("workflow output {name} contains a line break");
+    }
+    let Ok(path) = std::env::var("GITHUB_OUTPUT") else {
+        return Ok(());
+    };
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .with_context(|| format!("open GITHUB_OUTPUT {path}"))?;
+    writeln!(file, "{name}={value}").with_context(|| format!("write workflow output {name}"))
+}
+
+fn stable_resolve(args: &StableResolveArgs) -> Result<()> {
+    repository(&args.repository)?;
+    let release: serde_json::Value = serde_json::from_str(&output(
+        Command::new("gh").args(["api", &format!("repos/{}/releases/latest", args.repository)]),
+        "resolve latest GitHub release",
+    )?)
+    .context("decode latest GitHub release")?;
+    if release.get("draft").and_then(serde_json::Value::as_bool) != Some(false)
+        || release
+            .get("prerelease")
+            .and_then(serde_json::Value::as_bool)
+            != Some(false)
+    {
+        bail!("latest GitHub release is not a published stable release");
+    }
+    let tag = release
+        .get("tag_name")
+        .and_then(serde_json::Value::as_str)
+        .context("latest GitHub release lacks tag_name")?;
+    let version = tag
+        .strip_prefix('v')
+        .context("stable GitHub release tag must start with v")?;
+    stable_version(version)?;
+    let commit_sha = output(
+        Command::new("gh").args([
+            "api",
+            &format!("repos/{}/commits/{tag}", args.repository),
+            "--jq",
+            ".sha",
+        ]),
+        "resolve stable release commit",
+    )?;
+    commit(&commit_sha)?;
+
+    let npm: String = serde_json::from_str(&output(
+        Command::new("npm").args([
+            "view",
+            &format!("{}@{version}", args.npm_package),
+            "version",
+            "--json",
+        ]),
+        "resolve npm release",
+    )?)
+    .context("decode npm version")?;
+    if npm != version {
+        bail!("npm version {npm} does not match GitHub release {version}");
+    }
+
+    let crate_metadata = curl_json(
+        &format!(
+            "https://crates.io/api/v1/crates/{}/{version}",
+            args.crate_name
+        ),
+        "resolve crates.io release",
+    )?;
+    if crate_metadata
+        .pointer("/version/num")
+        .and_then(serde_json::Value::as_str)
+        != Some(version)
+    {
+        bail!("crates.io does not expose the GitHub release version");
+    }
+    let python_metadata = curl_json(
+        &format!(
+            "https://pypi.org/pypi/{}/{version}/json",
+            args.python_package
+        ),
+        "resolve PyPI release",
+    )?;
+    if python_metadata
+        .pointer("/info/version")
+        .and_then(serde_json::Value::as_str)
+        != Some(version)
+    {
+        bail!("PyPI does not expose the GitHub release version");
+    }
+
+    append_output("tag", tag)?;
+    append_output("version", version)?;
+    append_output("commit", &commit_sha)?;
+    println!("stable release resolved: {tag} at {commit_sha}");
+    Ok(())
+}
+
+fn digest(path: &Path) -> Result<String> {
+    let mut file = File::open(path).with_context(|| format!("open {}", path.display()))?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0_u8; 64 * 1024];
+    loop {
+        let read = file
+            .read(&mut buffer)
+            .with_context(|| format!("read {}", path.display()))?;
+        if read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..read]);
+    }
+    Ok(format!("{:x}", hasher.finalize()))
+}
+
+fn verify_checksum(directory: &Path, filename: &str) -> Result<()> {
+    let checksum_path = directory.join(format!("{filename}.sha256"));
+    let contents = fs::read_to_string(&checksum_path)
+        .with_context(|| format!("read {}", checksum_path.display()))?;
+    let mut fields = contents.split_whitespace();
+    let expected = fields.next().context("checksum lacks digest")?;
+    let recorded = fields
+        .next()
+        .context("checksum lacks artifact filename")?
+        .trim_start_matches('*');
+    if fields.next().is_some() || recorded != filename {
+        bail!(
+            "{} does not name exactly {filename}",
+            checksum_path.display()
+        );
+    }
+    let actual = digest(&directory.join(filename))?;
+    if actual != expected {
+        bail!("stable artifact checksum mismatch for {filename}");
+    }
+    Ok(())
+}
+
+fn one_file(root: &Path, extension: &str, label: &str) -> Result<PathBuf> {
+    let mut matches = fs::read_dir(root)
+        .with_context(|| format!("read {}", root.display()))?
+        .filter_map(std::result::Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file() && path.to_string_lossy().ends_with(extension))
+        .collect::<Vec<_>>();
+    matches.sort();
+    match matches.as_slice() {
+        [path] => Ok(path.clone()),
+        _ => bail!(
+            "{label}: expected one {extension} file under {}, found {}",
+            root.display(),
+            matches.len()
+        ),
+    }
+}
+
+fn python_command() -> Result<&'static str> {
+    ["python3", "python"]
+        .into_iter()
+        .find(|candidate| {
+            Command::new(candidate)
+                .args(["-m", "pip", "--version"])
+                .output()
+                .is_ok_and(|output| output.status.success())
+        })
+        .context("Python 3 with pip is required to fetch the stable wheel")
+}
+
+fn stable_fetch(args: &StableFetchArgs) -> Result<()> {
+    repository(&args.repository)?;
+    stable_version(&args.version)?;
+    if args.tag != format!("v{}", args.version) {
+        bail!("stable tag and version do not match");
+    }
+    if args.out_dir.exists() {
+        bail!(
+            "refusing to replace stable fetch directory {}",
+            args.out_dir.display()
+        );
+    }
+    let release = args.out_dir.join("release");
+    let native = args.out_dir.join("native");
+    let python = args.out_dir.join("python");
+    for directory in [&release, &native, &python] {
+        fs::create_dir_all(directory).with_context(|| format!("create {}", directory.display()))?;
+    }
+
+    let native_archive = args.platform.native_archive(&args.version);
+    let mut github = Command::new("gh");
+    github.args([
+        "release",
+        "download",
+        &args.tag,
+        "--repo",
+        &args.repository,
+        "--dir",
+    ]);
+    github.arg(&release);
+    for pattern in [
+        "aozora.wasm",
+        "aozora.wasm.sha256",
+        "aozora-go.tar.gz",
+        "aozora-go.tar.gz.sha256",
+    ] {
+        github.args(["--pattern", pattern]);
+    }
+    run_command(&mut github, "download stable portable release assets")?;
+
+    let mut native_download = Command::new("gh");
+    native_download.args([
+        "release",
+        "download",
+        &args.tag,
+        "--repo",
+        &args.repository,
+        "--dir",
+    ]);
+    native_download.arg(&native);
+    for pattern in [&native_archive, &format!("{native_archive}.sha256")] {
+        native_download.args(["--pattern", pattern]);
+    }
+    run_command(&mut native_download, "download stable native release asset")?;
+
+    run_command(
+        Command::new("npm")
+            .args([
+                "pack",
+                &format!("aozora-wasm@{}", args.version),
+                "--pack-destination",
+            ])
+            .arg(&release),
+        "download stable npm package",
+    )?;
+    let crate_path = release.join(format!("aozora-{}.crate", args.version));
+    run_command(
+        Command::new("curl")
+            .args([
+                "--fail",
+                "--silent",
+                "--show-error",
+                "--location",
+                "--header",
+                "User-Agent: aozora-real-work-lab/0.1",
+                "--output",
+            ])
+            .arg(&crate_path)
+            .arg(format!(
+                "https://crates.io/api/v1/crates/aozora/{}/download",
+                args.version
+            )),
+        "download stable Rust crate",
+    )?;
+    run_command(
+        Command::new(python_command()?)
+            .args([
+                "-m",
+                "pip",
+                "download",
+                "--disable-pip-version-check",
+                "--no-cache-dir",
+                "--only-binary=:all:",
+                "--no-deps",
+                "--dest",
+            ])
+            .arg(&python)
+            .arg(format!("aozora=={}", args.version)),
+        "download stable Python wheel",
+    )?;
+
+    verify_checksum(&release, "aozora.wasm")?;
+    verify_checksum(&release, "aozora-go.tar.gz")?;
+    verify_checksum(&native, &native_archive)?;
+    let crate_metadata = curl_json(
+        &format!("https://crates.io/api/v1/crates/aozora/{}", args.version),
+        "read stable crate checksum",
+    )?;
+    let expected = crate_metadata
+        .pointer("/version/checksum")
+        .and_then(serde_json::Value::as_str)
+        .context("crates.io metadata lacks checksum")?;
+    if digest(&crate_path)? != expected {
+        bail!("stable crate checksum does not match crates.io metadata");
+    }
+    let npm = one_file(&release, ".tgz", "stable npm package")?;
+    let wheel = one_file(&python, ".whl", "stable Python wheel")?;
+    if !npm.to_string_lossy().contains(&args.version)
+        || !wheel.to_string_lossy().contains(&args.version)
+    {
+        bail!("a stable registry returned a different package version");
+    }
+    println!(
+        "stable artifacts fetched for {} ({:?})",
+        args.tag, args.platform
+    );
     Ok(())
 }
 
@@ -494,6 +905,8 @@ fn execute(task: Task) -> Result<()> {
             ReleaseTask::Build(args) => build(&args),
             ReleaseTask::Visual(args) => visual(&args),
             ReleaseTask::AssertResults(args) => assert_results(&args),
+            ReleaseTask::StableResolve(args) => stable_resolve(&args),
+            ReleaseTask::StableFetch(args) => stable_fetch(&args),
         },
     }
 }
@@ -516,13 +929,23 @@ mod tests {
     use anyhow::Result;
     use tar::{Builder, Header};
 
-    use super::{commit, unpack};
+    use super::{commit, repository, stable_version, unpack};
 
     #[test]
     fn accepts_only_pinned_commits() {
         assert!(commit("0123456789abcdef0123456789abcdef01234567").is_ok());
         assert!(commit("main").is_err());
         assert!(commit("0123456789ABCDEF0123456789ABCDEF01234567").is_err());
+    }
+
+    #[test]
+    fn accepts_only_stable_registry_coordinates() {
+        assert!(stable_version("1.2.3").is_ok());
+        assert!(stable_version("1.2.3-rc.1").is_err());
+        assert!(stable_version("latest").is_err());
+        assert!(repository("P4suta/aozora").is_ok());
+        assert!(repository("P4suta").is_err());
+        assert!(repository("P4suta/../aozora").is_err());
     }
 
     #[test]

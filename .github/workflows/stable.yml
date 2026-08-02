@@ -1,0 +1,212 @@
+name: stable channel
+
+on:
+  schedule:
+    - cron: "17 18 * * 1"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: stable-channel
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      commit: ${{ steps.release.outputs.commit }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.97.1"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.16.0"
+          registry-url: https://registry.npmjs.org
+      - id: release
+        name: Require one version across GitHub, npm, crates.io, and PyPI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: cargo +1.97.1 run --quiet --locked --bin xtask -- release stable-resolve
+
+  candidates:
+    needs: resolve
+    name: stable candidate (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            runner: ubuntu-latest
+          - platform: macos
+            runner: macos-latest
+          - platform: windows
+            runner: windows-2025
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: P4suta/aozora
+          ref: ${{ needs.resolve.outputs.commit }}
+          path: aozora
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: jdx/mise-action@9e7f7633ff6f6d6048a9418a68d48f288f50eb14 # v4.2.3
+        with:
+          version: 2026.7.13
+          cache: true
+          install_args: go
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.97.1"
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "24.16.0"
+          registry-url: https://registry.npmjs.org
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          workspaces: aozora
+          key: stable-${{ matrix.platform }}-${{ needs.resolve.outputs.version }}
+      - name: Fetch immutable public distributions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          cargo +1.97.1 run --quiet --locked --bin xtask -- release stable-fetch
+          --tag ${{ needs.resolve.outputs.tag }}
+          --version ${{ needs.resolve.outputs.version }}
+          --platform ${{ matrix.platform }}
+          --out-dir _stable/distributions
+      - name: Build the released Extism host and assemble the bundle
+        run: |
+          cargo +1.97.0 build --locked --release --manifest-path aozora/Cargo.toml \
+            -p aozora-extism --features host-smoke --bin aozora-real-work-extism
+          cargo +1.97.0 run --locked --release --manifest-path aozora/Cargo.toml \
+            -p aozora-xtask -- real-work bundle \
+            --platform ${{ matrix.platform }} \
+            --commit ${{ needs.resolve.outputs.commit }} \
+            --version ${{ needs.resolve.outputs.version }} \
+            --release-dir _stable/distributions/release \
+            --native-dir _stable/distributions/native \
+            --python-dir _stable/distributions/python \
+            --adapters-dir src/workers \
+            --extism-worker aozora/target/release/aozora-real-work-extism${{ runner.os == 'Windows' && '.exe' || '' }} \
+            --out-dir _stable/bundle
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aozora-stable-candidate-${{ needs.resolve.outputs.version }}-${{ matrix.platform }}
+          path: _stable/bundle/bundle.tar
+          retention-days: 30
+          if-no-files-found: error
+
+  inputs:
+    needs: resolve
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: P4suta/aozora
+          ref: ${{ needs.resolve.outputs.commit }}
+          path: aozora
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: ./aozora/.github/actions/load-release-inputs
+        with:
+          env-file: aozora/.github/release-inputs.env
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.AOZORA_REAL_WORK_CORPUS_REPOSITORY }}
+          ref: ${{ env.AOZORA_REAL_WORK_CORPUS_SHA }}
+          path: corpus
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
+        with:
+          toolchain: "1.97.0"
+      - name: Pack the released baseline and its pinned corpus
+        run: |
+          cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
+            -p aozora-xtask -- real-work corpus \
+            --checkout corpus \
+            --expected-commit "$AOZORA_REAL_WORK_CORPUS_SHA" \
+            --out _stable/inputs/corpus.tar
+          cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
+            -p aozora-xtask -- real-work baselines \
+            --diagnostics aozora/.github/real-work/diagnostics-baseline.json \
+            --site aozora/.github/real-work/site \
+            --out-dir _stable/inputs
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aozora-stable-corpus-${{ needs.resolve.outputs.version }}
+          path: _stable/inputs/corpus.tar
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aozora-stable-diagnostics-${{ needs.resolve.outputs.version }}
+          path: _stable/inputs/diagnostics-baseline.json
+          retention-days: 30
+          if-no-files-found: error
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aozora-stable-pages-${{ needs.resolve.outputs.version }}
+          path: _stable/inputs/site.tar
+          retention-days: 30
+          if-no-files-found: error
+
+  gate:
+    needs: [resolve, candidates, inputs]
+    uses: ./.github/workflows/release-gate.yml
+    with:
+      lab_commit: ${{ github.sha }}
+      aozora_commit: ${{ needs.resolve.outputs.commit }}
+      candidate_artifact_prefix: aozora-stable-candidate-${{ needs.resolve.outputs.version }}
+      corpus_artifact: aozora-stable-corpus-${{ needs.resolve.outputs.version }}
+      diagnostics_artifact: aozora-stable-diagnostics-${{ needs.resolve.outputs.version }}
+      baseline_artifact: aozora-stable-pages-${{ needs.resolve.outputs.version }}
+
+  deploy:
+    needs: [resolve, gate]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.gate.outputs.pages_artifact }}
+          path: site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: site
+      - uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        id: deployment

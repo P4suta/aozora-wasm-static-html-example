@@ -79,6 +79,8 @@ visual検証は同一browser process内でbaseline/candidateを開き、各作�
 
 各作品ページはdiagnostics、採用根拠、公式作品カード、公式ZIP、UTF-8原文、比較report、[青空文庫収録ファイルの取り扱い規準](https://www.aozora.gr.jp/guide/kijyunn.html)を表示します。900MiBを超える場合は作品を削らずdeployを停止します。
 
+Pagesを更新できるのは週次・手動の`stable channel` workflowだけです。このworkflowはGitHub Release、npm、crates.io、PyPIで同じstable versionが公開済みであることを解決し、各registryから実際のpackageを再取得して全ゲートを通したサイトだけをdeployします。PRの`site preview`は開発用artifactを保存しますが公開しません。
+
 ## 品質ゲート
 
 `bun run check` はBiome、TypeScript、Clippy、Rust/Bunテスト、dead-code、full static buildを実行します。Rust testは権利cutoff、著作権flag、hash、worker fail-closed、projection差、shard、静的サイトの再現性、容量失敗時の原子的保持を検査します。Playwright E2EはChromium・Firefox・WebKitで静的サイトとaccessibilityを検査します。

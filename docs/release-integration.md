@@ -29,6 +29,7 @@ jobs:
     uses: P4suta/aozora-wasm-static-html-example/.github/workflows/release-gate.yml@0123456789abcdef0123456789abcdef01234567
     with:
       lab_commit: 0123456789abcdef0123456789abcdef01234567
+      aozora_commit: fedcba9876543210fedcba9876543210fedcba98
       candidate_artifact_prefix: aozora-candidate
       corpus_artifact: aozora-rights-corpus
       diagnostics_artifact: aozora-diagnostics-stable
@@ -50,7 +51,9 @@ cargo run --locked --bin xtask -- release verify \
 
 workflowはLinux・macOS・Windowsを4 shardずつ実行し、全OS/shardとvisual jobを`real-work release gate`へfan-inします。`aozora`側の既存`release-ready`はこのjobを必須needsに加えます。このfan-inより前にcrate、npm、PyPI、GitHub Releaseをpublishしてはいけません。
 
-Pages用buildはLinux候補で全engineのunsharded verificationを再実行し、WASMを正本として生成します。900MiB gateを通ったartifactだけをChromium・Firefox・WebKitの狭幅/広幅でvisual baselineと比較します。成功時だけworkflow output `pages_artifact` が指す候補サイトartifactを生成します。候補サイトrootの`diagnostics-baseline.json`は次の正式版入力です。呼び出し元はfan-in成功後にこれをPagesへdeployします。公開後のstable channelはregistry/GitHubから実installしたworker bundleで同じコマンドを定期実行し、成功versionだけをPagesへ昇格します。
+Pages用buildはLinux候補で全engineのunsharded verificationを再実行し、WASMを正本として生成します。900MiB gateを通ったartifactだけをChromium・Firefox・WebKitの狭幅/広幅でvisual baselineと比較します。成功時だけworkflow output `pages_artifact` が指す候補サイトartifactを生成します。候補サイトrootの`diagnostics-baseline.json`は次の正式版入力です。
+
+`.github/workflows/stable.yml`は公開済みGitHub Releaseのtag/commitを正本にし、npm、crates.io、PyPIに同じstable versionが存在することを`xtask release stable-resolve`で確認します。Linux・macOS・Windowsごとに`stable-fetch`がGitHub Release、npm、crates.io、PyPIから実packageを取得し、公開checksumとregistry checksumを検証してbundle化します。同じrelease gateが成功した場合だけ、このworkflowがPagesへdeployします。開発用`site preview`にはPages書き込み権限がありません。
 
 最初のrights-filtered releaseだけは、全作品のdiagnosticsをbootstrap候補として生成し、corpus SHA・全entry・既知diagnosticsをレビューしてから`diagnostics_artifact`へ固定します。空baselineへの自動置換や、失敗jobからのbaseline採用は行いません。
 
