@@ -1,9 +1,15 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("serves the deterministic ten-work library without client scripts", async ({ page }) => {
+const editions = {
+  aibiki: "000005-bb70c5adacb1c844",
+  kumonoIto: "000092-d44233ef953c10da",
+  sanshoDayu: "000689-254b86dff8d7f6df",
+} as const;
+
+test("serves the deterministic real-work lab without client scripts", async ({ page }) => {
   await page.goto("/index.html");
-  await expect(page).toHaveTitle("aozora-wasm static HTML example");
+  await expect(page).toHaveTitle("aozora distribution verification lab");
   await expect(page.locator(".work-card")).toHaveCount(10);
   await expect(page.locator("script")).toHaveCount(0);
   await expect(page.locator('a[href="./build-report.json"]')).toBeVisible();
@@ -15,7 +21,7 @@ test("serves the deterministic ten-work library without client scripts", async (
 test("keeps resolved gaiji typographically neutral and unresolved gaiji identifiable", async ({
   page,
 }) => {
-  await page.goto("/000005.utf8.html");
+  await page.goto(`/works/${editions.aibiki}.html`);
   const resolved = page.locator(".reader .aozora-gaiji[data-codepoint]").first();
   await expect(resolved).toBeVisible();
   const resolvedStyle = await resolved.evaluate((element) => {
@@ -59,7 +65,7 @@ test("keeps resolved gaiji typographically neutral and unresolved gaiji identifi
 });
 
 test("records the mixed-gaiji ruby compatibility boundary by WASM version", async ({ page }) => {
-  await page.goto("/000092.utf8.html");
+  await page.goto(`/works/${editions.kumonoIto}.html`);
   const reading = page.locator("rt", { hasText: /^かんだた$/ }).first();
   await expect(reading).toBeVisible();
   const base = await reading.evaluate((element) => {
@@ -74,7 +80,7 @@ test("records the mixed-gaiji ruby compatibility boundary by WASM version", asyn
       .join("");
   });
   const footer = await page.locator(".site-footer").textContent();
-  if (footer?.includes("aozora-wasm@0.5.0")) {
+  if (footer?.includes("aozora-wasm@0.5.0") || footer?.includes("aozora 0.5.0")) {
     expect(base).toBe("陀多");
     await expect(page.locator('[data-codepoint="U+728D"]').first()).toHaveText("犍");
   } else {
@@ -88,7 +94,7 @@ for (const viewport of [
 ]) {
   test(`has no horizontal page overflow at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.goto("/000689.utf8.html");
+    await page.goto(`/works/${editions.sanshoDayu}.html`);
     const dimensions = await page.evaluate(() => ({
       clientWidth: document.documentElement.clientWidth,
       scrollWidth: document.documentElement.scrollWidth,
@@ -98,7 +104,7 @@ for (const viewport of [
 }
 
 test("the reading page passes automated accessibility checks", async ({ page }) => {
-  await page.goto("/000005.utf8.html");
+  await page.goto(`/works/${editions.aibiki}.html`);
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 });

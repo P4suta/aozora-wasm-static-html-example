@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "aozoraCommit": "25ee0e6c71df311e60f08c5b13b323a318bab5d1",
+  "engines": {
+    "wasm": {
+      "command": ["bun", "run", "src/workers/wasm.ts"],
+      "artifactPath": "../node_modules/aozora-wasm/aozora_wasm_bg.wasm",
+      "sha256": "9aec8090b43351a07eeb24face7c10f189424c65de263740aaebc78e30f1c74d",
+      "expectedVersion": "0.5.0",
+      "expectedSchemaVersion": 3,
+      "timeoutMs": 30000
+    }
+  }
+}

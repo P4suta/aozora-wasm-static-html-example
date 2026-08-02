@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "23 17 * * 0"
+    - cron: "23 19 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -20,22 +20,22 @@ jobs:
   codeql:
     name: codeql (${{ matrix.language }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
-      actions: read # CodeQL resolves workflow telemetry for analysis.
       contents: read
-      security-events: write # CodeQL uploads SARIF results.
+      actions: read
+      packages: read
+      security-events: write
     strategy:
       fail-fast: false
       matrix:
-        language:
-          - actions
-          - javascript-typescript
+        language: [actions, javascript-typescript, rust]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
         with:
+          build-mode: none
           languages: ${{ matrix.language }}
       - uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
