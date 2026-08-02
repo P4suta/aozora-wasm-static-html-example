@@ -62,6 +62,15 @@ SHA-256を記録しています。Unicode正規化、外字置換、本文修正
 失わず表示する未解決外字だけを識別可能な装飾にするため、このサイト固有のCSSを
 標準スタイルシートの後に適用しています。
 
+## 公開版の既知境界
+
+現在はnpmで公開されている`aozora-wasm@0.5.0`を使用します。この版では「蜘蛛の糸」の
+`犍陀多《かんだた》`で、外字から解決した「犍」がruby baseの外側に残ります。
+このRepoはconsumer側で記法の意味を補正せず、version別のunit testとbrowser testで
+挙動を固定しています。修正は`aozora`本体の
+[P4suta/aozora#625](https://github.com/P4suta/aozora/pull/625)に含まれており、
+公開版を更新した時点でtestはruby base全体が「犍陀多」であることを要求します。
+
 ## 継続的検証
 
 Pull Requestでは型、format、lint、カバレッジ、dead code、決定性、HTML構文、
