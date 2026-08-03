@@ -1,80 +1,75 @@
 :root {
   color-scheme: light;
-  --ink: #24211d;
-  --muted: #615b53;
-  --paper: #f8f5ee;
-  --paper-deep: #eee8dc;
-  --line: #cfc5b5;
-  --accent: #315c50;
-  font-family: system-ui, sans-serif;
+  --text: #1f2328;
+  --muted: #59636e;
+  --border: #d0d7de;
+  --link: #0969da;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 * {
   box-sizing: border-box;
 }
 
-html {
-  background: var(--paper-deep);
-  color: var(--ink);
+html,
+body {
+  margin: 0;
+  background: #fff;
+  color: var(--text);
 }
 
 body {
   min-height: 100vh;
-  margin: 0;
-  background: var(--paper);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 a {
-  color: var(--accent);
-  text-underline-offset: 0.18em;
-}
-
-a:hover {
-  text-decoration-thickness: 0.14em;
+  color: var(--link);
+  text-underline-offset: 0.15em;
 }
 
 a:focus-visible {
-  border-radius: 0.15rem;
-  outline: 3px solid var(--accent);
+  border-radius: 0.125rem;
+  outline: 3px solid #54aeff;
   outline-offset: 0.2rem;
 }
 
 .site-header,
 .site-footer,
-.work-navigation {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: min(100% - 2rem, 72rem);
+main {
+  width: min(100% - 2rem, 56rem);
   margin-inline: auto;
 }
 
 .site-header {
-  padding-block: 1.25rem;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 
 .site-header > a {
-  color: var(--ink);
-  font-weight: 700;
+  color: var(--text);
+  font-weight: 600;
   text-decoration: none;
 }
 
-.site-header > span,
-.section-heading > span {
-  color: var(--muted);
+.site-header nav,
+.resources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
 }
 
 .site-footer {
-  align-items: flex-start;
-  margin-top: 5rem;
-  padding-block: 2rem 3rem;
-  border-top: 1px solid var(--line);
+  margin-top: 3rem;
+  padding-block: 1.25rem 2rem;
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .site-footer p {
@@ -82,90 +77,138 @@ a:focus-visible {
 }
 
 main {
-  width: min(100% - 2rem, 72rem);
-  margin-inline: auto;
+  overflow-wrap: anywhere;
 }
 
-.book {
-  width: min(100%, 48rem);
-  margin: 5rem auto 0;
+h1,
+h2 {
+  line-height: 1.3;
 }
 
-.book-header {
-  padding-bottom: 2.5rem;
-  text-align: center;
+h1 {
+  margin: 2rem 0 0.25rem;
+  font-size: 1.75rem;
 }
 
-.eyebrow {
+h2 {
   margin: 0 0 1rem;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 1.25rem;
 }
 
-.book-header h1,
-.work-card strong {
-  margin: 0;
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-}
-
-.book-header h1 {
-  font-size: clamp(2rem, 7vw, 3.5rem);
-}
-
+.page-summary,
 .reading {
-  margin: 0.8rem 0 1.8rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-  letter-spacing: 0.12em;
-}
-
-.contributors {
-  display: grid;
-  gap: 0.35rem;
-  justify-content: center;
-}
-
-.contributor {
-  display: grid;
-  grid-template-columns: 4rem auto;
-  gap: 1rem;
   margin: 0;
-  text-align: left;
+  color: var(--muted);
 }
 
-.contributor span {
+.edition-list {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.edition-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.edition-item a {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) minmax(8rem, auto);
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.6rem 0;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.edition-item strong {
+  font-weight: 600;
+}
+
+.edition-item a:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.work-number,
+.edition-author,
+.section-heading span {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: 0.875rem;
+}
+
+.edition-author {
   text-align: right;
 }
 
-.text-section {
+.pagination,
+.resources {
+  margin-top: 1.5rem;
+}
+
+.index-group {
   margin-top: 2rem;
 }
 
-.text-section > h2,
-.source-information h2 {
-  margin: 0 0 1.5rem;
-  font:
-    600 1rem / 1.5 system-ui,
-    sans-serif;
-  letter-spacing: 0.08em;
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.index-group .edition-list {
+  margin-top: 0.5rem;
+}
+
+.work {
+  max-width: 48rem;
+  margin: 2rem auto 0;
+}
+
+.work-header {
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.work-header h1 {
+  margin-top: 0;
+}
+
+.contributors {
+  margin-top: 1rem;
+}
+
+.contributor {
+  display: flex;
+  gap: 0.75rem;
+  margin: 0.25rem 0;
+}
+
+.contributor span {
+  min-width: 4rem;
+  color: var(--muted);
+}
+
+.text-section,
+.supporting-information {
+  margin-top: 2rem;
 }
 
 .reader {
-  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
-  font-size: clamp(1rem, 2.2vw, 1.08rem);
-  line-height: 2.15;
+  font-family: inherit;
+  line-height: 2;
   overflow-wrap: anywhere;
 }
 
 .reader p {
-  margin: 0 0 1.15em;
+  margin: 0 0 1em;
 }
 
 .reader ruby rt {
@@ -188,184 +231,81 @@ main {
   color: var(--aozora-gaiji-fg);
 }
 
-.source-information {
-  margin-top: 6rem;
-  padding: 2rem;
-  border: 1px solid var(--line);
-  background: rgb(255 255 255 / 35%);
+.supporting-information {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
 }
 
-.source-information + .source-information {
-  margin-top: 2rem;
+.supporting-information dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 1rem;
 }
 
-.bibliography {
-  font-size: 0.78rem;
-  line-height: 1.7;
+.supporting-information dt {
+  color: var(--muted);
 }
 
-.bibliography p {
-  margin: 0.15rem 0;
+.supporting-information dd {
+  margin: 0;
+}
+
+.diagnostics code {
+  white-space: normal;
 }
 
 .source-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem 1.4rem;
-  margin: 1.5rem 0 0;
-  padding: 1.5rem 0 0;
-  border-top: 1px solid var(--line);
-  font-size: 0.82rem;
-  list-style: none;
+  margin: 1rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.source-links li + li {
+  margin-top: 0.25rem;
 }
 
 .work-navigation {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
   margin-top: 2rem;
-  font-size: 0.82rem;
-}
-
-.work-navigation > * {
-  flex: 1;
-}
-
-.work-navigation > :nth-child(2) {
-  text-align: center;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .work-navigation > :last-child {
   text-align: right;
 }
 
-.index-main {
-  width: min(100% - 2rem, 64rem);
-}
-
-.summary {
-  padding: 4rem 0 3rem;
-}
-
-.summary h1,
-.index-title {
-  margin: 0;
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  line-height: 1.2;
-}
-
-.summary p {
-  max-width: 43rem;
-  margin: 1.25rem 0 0;
-  color: #4f4a43;
-  line-height: 1.7;
-}
-
-.index-title {
-  margin-block: 4rem 2rem;
-}
-
-.section-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  border-bottom: 1px solid var(--line);
-}
-
-.section-heading h2 {
-  margin: 0 0 0.8rem;
-  font:
-    600 1rem / 1.5 system-ui,
-    sans-serif;
-  letter-spacing: 0.1em;
-}
-
-.section-heading span {
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.work-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  padding: 1px;
-  background: var(--line);
-  list-style: none;
-}
-
-.work-card {
-  min-width: 0;
-  background: var(--paper);
-}
-
-.work-card a {
-  display: grid;
-  min-height: 11rem;
-  padding: 1.6rem;
-  color: var(--ink);
-  text-decoration: none;
-}
-
-.work-card a:hover {
-  box-shadow: inset 0 0 0 2px var(--accent);
-}
-
-.work-card strong {
-  align-self: end;
-  font:
-    600 clamp(1.35rem, 4vw, 2rem) / 1.4 "Yu Mincho",
-    "Hiragino Mincho ProN",
-    "Noto Serif JP",
-    serif;
-  letter-spacing: 0.06em;
-}
-
-.work-card span:last-child {
-  margin-top: 0.6rem;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.work-number {
-  align-self: start;
-  color: var(--muted);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.resources,
-.pagination {
-  margin-top: 2rem;
-  font-size: 0.82rem;
-}
-
-@media (max-width: 42rem) {
-  .site-footer {
-    display: grid;
-  }
-
-  .book {
-    margin-top: 3.5rem;
-  }
-
-  .source-information {
-    padding: 1.25rem;
-  }
-
-  .work-navigation {
-    align-items: stretch;
+@media (max-width: 40rem) {
+  .site-header {
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .work-navigation > :nth-child(2),
-  .work-navigation > :last-child {
+  .edition-item a {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+    gap: 0.25rem 0.75rem;
+  }
+
+  .edition-author {
+    grid-column: 2;
     text-align: left;
   }
 
-  .work-grid {
-    grid-template-columns: 1fr;
+  .supporting-information dl {
+    display: block;
+  }
+
+  .supporting-information dd + dt {
+    margin-top: 0.75rem;
+  }
+
+  .work-navigation {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .work-navigation > :last-child {
+    text-align: left;
   }
 }

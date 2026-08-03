@@ -47,7 +47,19 @@ pub struct ArtifactManifest {
 
 #[must_use]
 pub fn sha256(bytes: impl AsRef<[u8]>) -> String {
-    format!("{:x}", Sha256::digest(bytes.as_ref()))
+    lowercase_hex(Sha256::digest(bytes.as_ref()))
+}
+
+#[must_use]
+pub fn lowercase_hex(bytes: impl AsRef<[u8]>) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let bytes = bytes.as_ref();
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for &byte in bytes {
+        output.push(char::from(HEX[usize::from(byte >> 4)]));
+        output.push(char::from(HEX[usize::from(byte & 0x0f)]));
+    }
+    output
 }
 
 pub fn verify_digest(bytes: &[u8], expected: &str, label: &str) -> Result<()> {
@@ -182,6 +194,7 @@ mod tests {
     fn digest_is_stable_and_mismatch_is_explicit() -> Result<()> {
         let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
         assert_eq!(sha256("abc"), expected);
+        assert_eq!(sha256("abc").len(), 64);
         let Err(error) = verify_digest(b"different", expected, "fixture") else {
             bail!("digest should differ");
         };

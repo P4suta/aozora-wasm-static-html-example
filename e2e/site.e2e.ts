@@ -9,8 +9,8 @@ const editions = {
 
 test("serves the deterministic real-work lab without client scripts", async ({ page }) => {
   await page.goto("/index.html");
-  await expect(page).toHaveTitle("aozora distribution verification lab");
-  await expect(page.locator(".work-card")).toHaveCount(10);
+  await expect(page).toHaveTitle("aozora verification");
+  await expect(page.locator(".edition-item")).toHaveCount(10);
   await expect(page.locator("script")).toHaveCount(0);
   await expect(page.locator('a[href="./build-report.json"]')).toBeVisible();
 
@@ -79,8 +79,10 @@ test("records the mixed-gaiji ruby compatibility boundary by WASM version", asyn
       .map((child) => child.textContent ?? "")
       .join("");
   });
-  const footer = await page.locator(".site-footer").textContent();
-  if (footer?.includes("aozora-wasm@0.5.0") || footer?.includes("aozora 0.5.0")) {
+  const reportResponse = await page.request.get(`/reports/${editions.kumonoIto}.json`);
+  expect(reportResponse.ok()).toBe(true);
+  const report = (await reportResponse.json()) as { canonical: { version: string } };
+  if (report.canonical.version === "0.5.0") {
     expect(base).toBe("陀多");
     await expect(page.locator('[data-codepoint="U+728D"]').first()).toHaveText("犍");
   } else {

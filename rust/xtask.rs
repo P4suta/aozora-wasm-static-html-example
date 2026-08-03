@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
 use anyhow::{Context, Result, bail};
+use aozora_lab::artifacts::lowercase_hex;
 use aozora_lab::doctor;
 use aozora_lab::model::{EngineSelector, Scope, VerificationReport};
 use aozora_lab::site::{self, BuildOptions};
@@ -370,7 +371,7 @@ fn digest(path: &Path) -> Result<String> {
         }
         hasher.update(&buffer[..read]);
     }
-    Ok(format!("{:x}", hasher.finalize()))
+    Ok(lowercase_hex(hasher.finalize()))
 }
 
 fn verify_checksum(directory: &Path, filename: &str) -> Result<()> {

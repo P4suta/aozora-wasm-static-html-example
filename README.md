@@ -1,4 +1,6 @@
-# aozora distribution verification lab
+# aozora-wasm-static-html-example
+
+[GitHub Pages](https://p4suta.github.io/aozora-wasm-static-html-example/)
 
 This repository verifies that seven `aozora` distributions produce the same output for a pinned
 Aozora Bunko corpus, then builds a static site without client-side JavaScript.
