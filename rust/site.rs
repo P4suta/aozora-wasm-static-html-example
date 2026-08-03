@@ -8,7 +8,7 @@ use serde_json::json;
 use tempfile::Builder;
 
 use crate::artifacts::sha256;
-use crate::model::{Edition, Engine, EngineSelector, VerificationReport, VerifiedWork};
+use crate::model::{Diagnostic, Edition, Engine, EngineSelector, VerificationReport, VerifiedWork};
 use crate::verify::{self, VerifyOptions};
 
 pub const DEFAULT_SIZE_LIMIT: u64 = 900 * 1024 * 1024;
@@ -53,16 +53,20 @@ fn shell(
 
 fn navigation(prefix: &str) -> String {
     format!(
-        "  <header class=\"site-header\"><a href=\"{prefix}index.html\">aozora distribution verification lab</a><nav aria-label=\"Indexes\"><a href=\"{prefix}indexes/authors/index.html\">Authors</a> · <a href=\"{prefix}indexes/gojuon/index.html\">Kana index</a></nav><span>Unofficial</span></header>"
+        "  <header class=\"site-header\"><a href=\"{prefix}index.html\">aozora verification</a><nav aria-label=\"Indexes\"><a href=\"{prefix}indexes/authors/index.html\">Authors</a><a href=\"{prefix}indexes/gojuon/index.html\">Kana index</a></nav></header>"
     )
 }
 
-fn work_cards(editions: &[Edition], prefix: &str) -> String {
+fn footer() -> &'static str {
+    "<footer class=\"site-footer\"><p>Unofficial site. Text and metadata: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a>.</p></footer>"
+}
+
+fn edition_list(editions: &[Edition], prefix: &str) -> String {
     editions
         .iter()
         .map(|edition| {
             format!(
-                "<li class=\"work-card\"><a href=\"{prefix}works/{}.html\"><span class=\"work-number\">{}</span><strong lang=\"ja\">{}</strong><span lang=\"ja\">{}</span></a></li>",
+                "<li class=\"edition-item\"><a href=\"{prefix}works/{}.html\"><span class=\"work-number\">{}</span><strong lang=\"ja\">{}</strong><span class=\"edition-author\" lang=\"ja\">{}</span></a></li>",
                 escape(&edition.edition_id),
                 escape(&edition.work_id),
                 escape(&edition.title),
@@ -78,15 +82,8 @@ fn index_page(
     total: usize,
     page: usize,
     pages: usize,
-    engines: &[Engine],
-    rights_filtered: bool,
     prefix: &str,
 ) -> String {
-    let corpus = if rights_filtered {
-        "rights-filtered corpus"
-    } else {
-        "development legacy manifest"
-    };
     let page_links = (1..=pages)
         .map(|value| {
             if value == page {
@@ -103,22 +100,15 @@ fn index_page(
         .collect::<Vec<_>>()
         .join(" ");
     let body = format!(
-        "{}\n  <main class=\"index-main\"><section class=\"summary\"><h1>Editions</h1><p>This site reports {total} editions from the {} that passed verification with <code>{}</code>.</p></section><section aria-labelledby=\"editions-heading\"><div class=\"section-heading\"><h2 id=\"editions-heading\">All editions</h2><span>{total} editions · page {page}/{pages}</span></div><ol class=\"work-grid\">{}</ol><nav class=\"pagination\" aria-label=\"Edition pages\">{page_links}</nav></section><nav class=\"resources\" aria-label=\"Resources\"><a href=\"{prefix}build-report.json\">Build report</a> · <a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></nav></main><footer class=\"site-footer\"><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
+        "{}\n  <main class=\"index-main\"><h1>Editions</h1><p class=\"page-summary\">{total} editions · Page {page} of {pages}</p><ol class=\"edition-list\">{}</ol><nav class=\"pagination\" aria-label=\"Edition pages\">{page_links}</nav><nav class=\"resources\" aria-label=\"Resources\"><a href=\"{prefix}build-report.json\">Build report</a><a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></nav></main>{}",
         navigation(prefix),
-        escape(corpus),
-        escape(
-            &engines
-                .iter()
-                .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(" / ")
-        ),
-        work_cards(editions, prefix)
+        edition_list(editions, prefix),
+        footer()
     );
     shell(
-        "aozora distribution verification lab",
+        "aozora verification",
         None,
-        "Static verification results for aozora distributions and Aozora Bunko editions.",
+        "Verified Aozora Bunko editions.",
         prefix,
         &body,
     )
@@ -178,22 +168,7 @@ fn adjacent(edition: Option<&Edition>, rel: &str, marker: &str) -> String {
 
 fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edition>) -> String {
     let edition = &work.edition;
-    let diagnostics = if work.canonical.diagnostics.is_empty() {
-        "<p>diagnostics: 0</p>".into()
-    } else {
-        format!(
-            "<ol>{}</ol>",
-            work.canonical
-                .diagnostics
-                .iter()
-                .map(|value| format!(
-                    "<li><code>{}</code></li>",
-                    escape(&serde_json::to_string(value).unwrap_or_default())
-                ))
-                .collect::<Vec<_>>()
-                .join("")
-        )
-    };
+    let diagnostics = diagnostics_section(&work.canonical.diagnostics);
     let contributors = edition
         .contributors
         .iter()
@@ -207,9 +182,8 @@ fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edit
         .collect::<Vec<_>>()
         .join("\n");
     let body = format!(
-        "{navigation}\n<main><article class=\"book\"><header class=\"book-header\"><p class=\"eyebrow\">Canonical output · {engine}</p><h1 lang=\"ja\">{title}</h1><p class=\"reading\" lang=\"ja\">{reading}</p><div class=\"contributors\">{contributors}</div></header><section class=\"text-section\" aria-labelledby=\"text-heading\"><h2 id=\"text-heading\">Text</h2><div class=\"reader aozora-notation\" lang=\"ja\">{text}</div></section><section class=\"source-information\"><h2>Diagnostics</h2>{diagnostics}</section><section class=\"source-information\"><h2>Rights and sources</h2>{rights}<ul class=\"source-links\"><li><a href=\"{card_url}\">Aozora Bunko work card</a></li><li><a href=\"{archive_url}\">Official text ZIP</a></li><li><a href=\"../sources/{edition_id}.txt\" download>Verified UTF-8 source</a></li><li><a href=\"../reports/{edition_id}.json\">Distribution comparison report</a></li><li><a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></li></ul></section></article><nav class=\"work-navigation\" aria-label=\"Edition navigation\">{previous}<a href=\"../index.html\">All editions</a>{next}</nav></main><footer class=\"site-footer\"><p>aozora {version} · schema {schema}</p><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
+        "{navigation}\n<main><article class=\"work\"><header class=\"work-header\"><h1 lang=\"ja\">{title}</h1><p class=\"reading\" lang=\"ja\">{reading}</p><div class=\"contributors\">{contributors}</div></header><section class=\"text-section\" aria-labelledby=\"text-heading\"><h2 id=\"text-heading\">Text</h2><div class=\"reader aozora-notation\" lang=\"ja\">{text}</div></section>{diagnostics}<section class=\"supporting-information\"><h2>Rights and sources</h2>{rights}<ul class=\"source-links\"><li><a href=\"{card_url}\">Aozora Bunko work card</a></li><li><a href=\"{archive_url}\">Official text ZIP</a></li><li><a href=\"../sources/{edition_id}.txt\" download>Verified UTF-8 source</a></li><li><a href=\"../reports/{edition_id}.json\">Distribution comparison report</a></li><li><a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></li></ul></section></article><nav class=\"work-navigation\" aria-label=\"Edition navigation\">{previous}<a href=\"../index.html\">All editions</a>{next}</nav></main>{footer}",
         navigation = navigation("../"),
-        engine = work.canonical_engine,
         title = escape(&edition.title),
         reading = escape(&edition.reading),
         text = work.canonical.html,
@@ -219,8 +193,7 @@ fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edit
         edition_id = escape(&edition.edition_id),
         previous = adjacent(previous, "prev", "←"),
         next = adjacent(next, "next", "→"),
-        version = escape(&work.canonical.version),
-        schema = work.canonical.schema_version,
+        footer = footer(),
     );
     shell(
         &edition.title,
@@ -228,6 +201,25 @@ fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edit
         "Static verification result for an Aozora Bunko edition.",
         "../",
         &body,
+    )
+}
+
+fn diagnostics_section(diagnostics: &[Diagnostic]) -> String {
+    if diagnostics.is_empty() {
+        return String::new();
+    }
+    let items = diagnostics
+        .iter()
+        .map(|value| {
+            format!(
+                "<li><code>{}</code></li>",
+                escape(&serde_json::to_string(value).unwrap_or_default())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("");
+    format!(
+        "<section class=\"supporting-information diagnostics\"><h2>Diagnostics</h2><ol>{items}</ol></section>"
     )
 }
 
@@ -245,18 +237,19 @@ fn grouped_page(
                 ""
             };
             format!(
-                "<section><div class=\"section-heading\"><h2{language}>{}</h2><span>{} editions</span></div><ol class=\"work-grid\">{}</ol></section>",
+                "<section class=\"index-group\"><div class=\"section-heading\"><h2{language}>{}</h2><span>{} editions</span></div><ol class=\"edition-list\">{}</ol></section>",
                 escape(name),
                 editions.len(),
-                work_cards(editions, "../../")
+                edition_list(editions, "../../")
             )
         })
         .collect::<Vec<_>>()
         .join("\n");
     let body = format!(
-        "{}<main class=\"index-main\"><h1 class=\"index-title\">{}</h1>{sections}</main><footer class=\"site-footer\"><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
+        "{}<main class=\"index-main\"><h1>{}</h1>{sections}</main>{}",
         navigation("../../"),
-        escape(title)
+        escape(title),
+        footer()
     );
     shell(
         &format!("{title} — aozora verification lab"),
@@ -319,12 +312,7 @@ fn directory_size(path: &Path) -> Result<u64> {
     Ok(total)
 }
 
-fn write_site(
-    root: &Path,
-    staging: &Path,
-    report: &VerificationReport,
-    rights_filtered: bool,
-) -> Result<()> {
+fn write_site(root: &Path, staging: &Path, report: &VerificationReport) -> Result<()> {
     for directory in [
         "works",
         "sources",
@@ -412,15 +400,7 @@ fn write_site(
         };
         fs::write(
             path,
-            index_page(
-                &editions[start..end],
-                editions.len(),
-                page,
-                pages,
-                &report.engines,
-                rights_filtered,
-                prefix,
-            ),
+            index_page(&editions[start..end], editions.len(), page, pages, prefix),
         )?;
     }
     let mut authors: BTreeMap<String, Vec<Edition>> = BTreeMap::new();
@@ -565,12 +545,7 @@ pub fn build(
     let parent = output.parent().context("output directory has no parent")?;
     fs::create_dir_all(parent)?;
     let staging_dir = Builder::new().prefix(".lab-stage-").tempdir_in(parent)?;
-    write_site(
-        options.root,
-        staging_dir.path(),
-        &report,
-        loaded.rights_filtered,
-    )?;
+    write_site(options.root, staging_dir.path(), &report)?;
     let size = write_build_report(
         staging_dir.path(),
         &report,
@@ -597,9 +572,9 @@ mod tests {
     use anyhow::Result;
     use tempfile::tempdir;
 
-    use super::{BuildOptions, DEFAULT_SIZE_LIMIT, build, gojuon};
+    use super::{BuildOptions, DEFAULT_SIZE_LIMIT, build, diagnostics_section, gojuon};
     use crate::artifacts::sha256;
-    use crate::model::EngineSelector;
+    use crate::model::{Diagnostic, EngineSelector, Span};
 
     fn hashes(path: &Path, prefix: &Path, result: &mut BTreeMap<String, String>) -> Result<()> {
         let mut entries = fs::read_dir(path)?.collect::<std::io::Result<Vec<_>>>()?;
@@ -657,9 +632,13 @@ mod tests {
         assert!(index.contains(">Authors</a>"));
         assert!(index.contains(">Kana index</a>"));
         assert!(index.contains(">Editions</h1>"));
-        assert!(index.contains(">All editions</h2>"));
+        assert!(index.contains("10 editions · Page 1 of 1"));
+        assert!(index.contains("class=\"edition-list\""));
         assert!(index.contains(">Build report</a>"));
         assert!(index.contains("<strong lang=\"ja\">"));
+        assert_eq!(index.matches("Unofficial site.").count(), 1);
+        assert!(!index.contains(">All editions</h2>"));
+        assert!(!index.contains("class=\"work-card\""));
         assert!(!index.contains("class=\"hero\""));
         assert!(!index.contains("class=\"about\""));
         assert!(!index.contains("収録版"));
@@ -676,9 +655,12 @@ mod tests {
         assert!(work.contains("<h1 lang=\"ja\">"));
         assert!(work.contains("<div class=\"reader aozora-notation\" lang=\"ja\">"));
         assert!(work.contains(">Text</h2>"));
-        assert!(work.contains(">Diagnostics</h2>"));
         assert!(work.contains(">Rights and sources</h2>"));
         assert!(work.contains(">All editions</a>"));
+        assert_eq!(work.matches("Unofficial site.").count(), 1);
+        assert!(!work.contains(">Diagnostics</h2>"));
+        assert!(!work.contains("Canonical output"));
+        assert!(!work.contains(" · schema "));
         assert!(!work.contains("class=\"ornament\""));
         assert!(!work.contains("aria-label=\"本文\""));
 
@@ -705,5 +687,21 @@ mod tests {
         assert!(failed.is_err());
         assert_eq!(fs::read_to_string(sentinel.join("sentinel"))?, "keep");
         Ok(())
+    }
+
+    #[test]
+    fn diagnostics_are_rendered_only_when_present() {
+        assert_eq!(diagnostics_section(&[]), "");
+
+        let section = diagnostics_section(&[Diagnostic {
+            kind: "unresolved-gaiji".into(),
+            severity: "warning".into(),
+            source: "※［＃fixture］".into(),
+            span: Span { start: 0, end: 1 },
+            codepoint: None,
+        }]);
+        assert!(section.contains(">Diagnostics</h2>"));
+        assert!(section.contains("unresolved-gaiji"));
+        assert!(section.contains("supporting-information diagnostics"));
     }
 }
