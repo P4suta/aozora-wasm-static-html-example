@@ -182,7 +182,7 @@ mod tests {
     fn digest_is_stable_and_mismatch_is_explicit() -> Result<()> {
         let expected = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
         assert_eq!(sha256("abc"), expected);
-        let Err(error) = verify_digest(b"abd", expected, "fixture") else {
+        let Err(error) = verify_digest(b"different", expected, "fixture") else {
             bail!("digest should differ");
         };
         let message = error.to_string();

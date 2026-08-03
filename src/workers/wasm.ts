@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
-import { loadAozora } from "../aozora.ts";
+import { fileURLToPath } from "node:url";
 
 interface Request {
   readonly protocolVersion: 1;
@@ -29,7 +31,12 @@ function request(value: unknown): Request {
   return input as unknown as Request;
 }
 
-const { api, version } = await loadAozora();
+const api = await import("aozora-wasm");
+const packageRoot = dirname(fileURLToPath(import.meta.resolve("aozora-wasm")));
+const wasm = await readFile(join(packageRoot, "aozora_wasm_bg.wasm"));
+api.initSync({ module: Uint8Array.from(wasm).buffer });
+api.prewarm();
+const version = api.version();
 const lines = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
 for await (const line of lines) {
   let requestId = "invalid";

@@ -6,7 +6,6 @@
   --paper-deep: #eee8dc;
   --line: #cfc5b5;
   --accent: #315c50;
-  --accent-soft: #dce8e2;
   font-family: system-ui, sans-serif;
 }
 
@@ -22,9 +21,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    linear-gradient(90deg, rgb(255 255 255 / 30%) 1px, transparent 1px) 0 0 / 3rem 3rem,
-    var(--paper);
+  background: var(--paper);
 }
 
 a {
@@ -109,7 +106,7 @@ main {
 }
 
 .book-header h1,
-.hero h1 {
+.work-card strong {
   margin: 0;
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", serif;
   font-weight: 600;
@@ -147,11 +144,17 @@ main {
   text-align: right;
 }
 
-.ornament {
-  margin: 0 0 4rem;
-  color: var(--muted);
-  text-align: center;
-  letter-spacing: 0.8em;
+.text-section {
+  margin-top: 2rem;
+}
+
+.text-section > h2,
+.source-information h2 {
+  margin: 0 0 1.5rem;
+  font:
+    600 1rem / 1.5 system-ui,
+    sans-serif;
+  letter-spacing: 0.08em;
 }
 
 .reader {
@@ -192,12 +195,8 @@ main {
   background: rgb(255 255 255 / 35%);
 }
 
-.source-information h2 {
-  margin: 0 0 1.5rem;
-  font:
-    600 1rem / 1.5 system-ui,
-    sans-serif;
-  letter-spacing: 0.08em;
+.source-information + .source-information {
+  margin-top: 2rem;
 }
 
 .bibliography {
@@ -241,28 +240,26 @@ main {
   width: min(100% - 2rem, 64rem);
 }
 
-.hero {
-  padding: clamp(5rem, 12vw, 9rem) 0;
+.summary {
+  padding: 4rem 0 3rem;
 }
 
-.hero h1 {
-  max-width: 15ch;
-  font-size: clamp(2.6rem, 8vw, 5.2rem);
-  line-height: 1.28;
+.summary h1,
+.index-title {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3.5rem);
+  line-height: 1.2;
 }
 
-.hero > p:not(.eyebrow) {
+.summary p {
   max-width: 43rem;
-  margin: 2rem 0 0;
+  margin: 1.25rem 0 0;
   color: #4f4a43;
-  line-height: 1.9;
+  line-height: 1.7;
 }
 
-.hero code {
-  padding: 0.1em 0.35em;
-  border-radius: 0.25rem;
-  background: var(--accent-soft);
-  font-size: 0.9em;
+.index-title {
+  margin-block: 4rem 2rem;
 }
 
 .section-heading {
@@ -303,15 +300,6 @@ main {
   background: var(--paper);
 }
 
-.work-card.featured {
-  grid-column: 1 / -1;
-  background: var(--accent-soft);
-}
-
-.work-card:last-child {
-  grid-column: 1 / -1;
-}
-
 .work-card a {
   display: grid;
   min-height: 11rem;
@@ -348,23 +336,10 @@ main {
   text-transform: uppercase;
 }
 
-.about {
-  max-width: 43rem;
-  margin: 7rem 0 0 auto;
-  padding-left: 2rem;
-  border-left: 3px solid var(--accent);
-}
-
-.about h2 {
-  margin-top: 0;
-  font:
-    600 1.15rem / 1.5 system-ui,
-    sans-serif;
-}
-
-.about p {
-  color: #4f4a43;
-  line-height: 1.85;
+.resources,
+.pagination {
+  margin-top: 2rem;
+  font-size: 0.82rem;
 }
 
 @media (max-width: 42rem) {
@@ -392,21 +367,5 @@ main {
 
   .work-grid {
     grid-template-columns: 1fr;
-  }
-
-  .work-card.featured {
-    grid-column: auto;
-  }
-
-  .work-card:last-child {
-    grid-column: auto;
-  }
-
-  .hero h1 br {
-    display: none;
-  }
-
-  .about {
-    padding-left: 1.25rem;
   }
 }

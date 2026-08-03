@@ -1,0 +1,12 @@
+[files]
+extend-exclude = [
+  ".release-please-manifest.json",
+  "Cargo.lock",
+  "bun.lock",
+  "lab/artifacts.example.json",
+  "lab/artifacts.json",
+  "lab/diagnostics-baseline.json",
+  "sources/**",
+  "vendor/**",
+  "works.json",
+]

@@ -34,9 +34,18 @@ fn escape(value: &str) -> String {
         .replace('\'', "&#39;")
 }
 
-fn shell(title: &str, description: &str, prefix: &str, body: &str) -> String {
+fn shell(
+    title: &str,
+    title_language: Option<&str>,
+    description: &str,
+    prefix: &str,
+    body: &str,
+) -> String {
+    let title_language = title_language
+        .map(|language| format!(" lang=\"{}\"", escape(language)))
+        .unwrap_or_default();
     format!(
-        "<!doctype html>\n<html lang=\"ja\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <meta name=\"description\" content=\"{}\">\n  <title>{}</title>\n  <link rel=\"stylesheet\" href=\"{prefix}styles/aozora-notation.css\">\n  <link rel=\"stylesheet\" href=\"{prefix}styles/site.css\">\n</head>\n<body>\n{body}\n</body>\n</html>\n",
+        "<!doctype html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <meta name=\"description\" content=\"{}\">\n  <title{title_language}>{}</title>\n  <link rel=\"stylesheet\" href=\"{prefix}styles/aozora-notation.css\">\n  <link rel=\"stylesheet\" href=\"{prefix}styles/site.css\">\n</head>\n<body>\n{body}\n</body>\n</html>\n",
         escape(description),
         escape(title)
     )
@@ -44,7 +53,7 @@ fn shell(title: &str, description: &str, prefix: &str, body: &str) -> String {
 
 fn navigation(prefix: &str) -> String {
     format!(
-        "  <header class=\"site-header\"><a href=\"{prefix}index.html\">aozora distribution verification lab</a><nav aria-label=\"索引\"><a href=\"{prefix}indexes/authors/index.html\">著者</a> · <a href=\"{prefix}indexes/gojuon/index.html\">五十音</a></nav><span>非公式</span></header>"
+        "  <header class=\"site-header\"><a href=\"{prefix}index.html\">aozora distribution verification lab</a><nav aria-label=\"Indexes\"><a href=\"{prefix}indexes/authors/index.html\">Authors</a> · <a href=\"{prefix}indexes/gojuon/index.html\">Kana index</a></nav><span>Unofficial</span></header>"
     )
 }
 
@@ -53,7 +62,7 @@ fn work_cards(editions: &[Edition], prefix: &str) -> String {
         .iter()
         .map(|edition| {
             format!(
-                "<li class=\"work-card\"><a href=\"{prefix}works/{}.html\"><span class=\"work-number\">{}</span><strong>{}</strong><span>{}</span></a></li>",
+                "<li class=\"work-card\"><a href=\"{prefix}works/{}.html\"><span class=\"work-number\">{}</span><strong lang=\"ja\">{}</strong><span lang=\"ja\">{}</span></a></li>",
                 escape(&edition.edition_id),
                 escape(&edition.work_id),
                 escape(&edition.title),
@@ -73,10 +82,10 @@ fn index_page(
     rights_filtered: bool,
     prefix: &str,
 ) -> String {
-    let mode = if rights_filtered {
-        "固定した権利判定済みコーパス"
+    let corpus = if rights_filtered {
+        "rights-filtered corpus"
     } else {
-        "開発用legacy manifest（正式公開ゲートでは使用不可）"
+        "development legacy manifest"
     };
     let page_links = (1..=pages)
         .map(|value| {
@@ -94,9 +103,9 @@ fn index_page(
         .collect::<Vec<_>>()
         .join(" ");
     let body = format!(
-        "{}\n  <main class=\"index-main\"><section class=\"hero\"><p class=\"eyebrow\">aozora · real-work parity gate</p><h1>実作品で、<br>七つの配布面を測る。</h1><p>{}の本文を用い、全projectionの一致を検証した静的サイトです。</p><p>検証面: <code>{}</code>。クライアントJavaScriptは配信しません。</p></section><section aria-labelledby=\"works-heading\"><div class=\"section-heading\"><h2 id=\"works-heading\">収録版</h2><span>{total} editions · page {page}/{pages}</span></div><ol class=\"work-grid\">{}</ol><nav class=\"pagination\" aria-label=\"ページ分割された作品索引\">{page_links}</nav></section><section class=\"about\"><h2>検証資料</h2><p><a href=\"{prefix}build-report.json\">ビルドレポート</a> · <a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">青空文庫収録ファイルの取り扱い規準</a></p></section></main><footer class=\"site-footer\"><p>青空文庫および各関係者による公式サービスではありません。</p></footer>",
+        "{}\n  <main class=\"index-main\"><section class=\"summary\"><h1>Editions</h1><p>This site reports {total} editions from the {} that passed verification with <code>{}</code>.</p></section><section aria-labelledby=\"editions-heading\"><div class=\"section-heading\"><h2 id=\"editions-heading\">All editions</h2><span>{total} editions · page {page}/{pages}</span></div><ol class=\"work-grid\">{}</ol><nav class=\"pagination\" aria-label=\"Edition pages\">{page_links}</nav></section><nav class=\"resources\" aria-label=\"Resources\"><a href=\"{prefix}build-report.json\">Build report</a> · <a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></nav></main><footer class=\"site-footer\"><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
         navigation(prefix),
-        escape(mode),
+        escape(corpus),
         escape(
             &engines
                 .iter()
@@ -108,7 +117,8 @@ fn index_page(
     );
     shell(
         "aozora distribution verification lab",
-        "aozoraの全配布面を権利確認済み実作品で比較する非公式の静的検証サイトです。",
+        None,
+        "Static verification results for aozora distributions and Aozora Bunko editions.",
         prefix,
         &body,
     )
@@ -117,7 +127,7 @@ fn index_page(
 fn rights(edition: &Edition) -> String {
     if edition.rights.mode == "rights-filtered" {
         format!(
-            "<dl><dt>初出</dt><dd>{}</dd><dt>解析年</dt><dd>{}</dd><dt>基準日 / cutoff</dt><dd>{} / {}</dd><dt>上流commit</dt><dd><code>{}</code></dd></dl>",
+            "<dl><dt>First publication</dt><dd lang=\"ja\">{}</dd><dt>Parsed years</dt><dd>{}</dd><dt>Reference date / cutoff</dt><dd>{} / {}</dd><dt>Upstream commit</dt><dd><code>{}</code></dd></dl>",
             escape(
                 edition
                     .rights
@@ -148,8 +158,7 @@ fn rights(edition: &Edition) -> String {
             )
         )
     } else {
-        "<p>開発用legacy manifestです。正式公開には権利判定済みコーパスmanifestが必要です。</p>"
-            .into()
+        "<p>This development legacy manifest is not accepted by the release gate.</p>".into()
     }
 }
 
@@ -158,7 +167,7 @@ fn adjacent(edition: Option<&Edition>, rel: &str, marker: &str) -> String {
         || "<span aria-hidden=\"true\"></span>".into(),
         |value| {
             format!(
-                "<a rel=\"{rel}\" href=\"./{}.html\">{} {}</a>",
+                "<a rel=\"{rel}\" href=\"./{}.html\">{} <span lang=\"ja\">{}</span></a>",
                 escape(&value.edition_id),
                 escape(marker),
                 escape(&value.title)
@@ -190,7 +199,7 @@ fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edit
         .iter()
         .map(|value| {
             format!(
-                "<p class=\"contributor\"><span>{}</span>{}</p>",
+                "<p class=\"contributor\" lang=\"ja\"><span>{}</span>{}</p>",
                 escape(&value.role),
                 escape(&value.name)
             )
@@ -198,39 +207,45 @@ fn work_page(work: &VerifiedWork, previous: Option<&Edition>, next: Option<&Edit
         .collect::<Vec<_>>()
         .join("\n");
     let body = format!(
-        "{}\n<main><article class=\"book\"><header class=\"book-header\"><p class=\"eyebrow\">byte-identical canonical output · {}</p><h1>{}</h1><p class=\"reading\">{}</p><div class=\"contributors\">{contributors}</div></header><div class=\"ornament\" aria-hidden=\"true\">＊　＊　＊</div><section class=\"reader aozora-notation\" aria-label=\"本文\">{}</section><section class=\"source-information\"><h2>Diagnostics</h2>{diagnostics}</section><section class=\"source-information\"><h2>採用根拠と出典</h2>{}<ul class=\"source-links\"><li><a href=\"{}\">青空文庫の作品カード</a></li><li><a href=\"{}\">公式テキストZIP</a></li><li><a href=\"../sources/{}.txt\" download>検証したUTF-8原文</a></li><li><a href=\"../reports/{}.json\">配布面比較report</a></li><li><a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">収録ファイルの取り扱い規準</a></li></ul></section></article><nav class=\"work-navigation\" aria-label=\"作品間の移動\">{}<a href=\"../index.html\">作品一覧</a>{}</nav></main><footer class=\"site-footer\"><p>aozora {} · schema {}</p><p>非公式の検証サイトです。</p></footer>",
-        navigation("../"),
-        work.canonical_engine,
-        escape(&edition.title),
-        escape(&edition.reading),
-        work.canonical.html,
-        rights(edition),
-        escape(&edition.card_url),
-        escape(&edition.archive_url),
-        escape(&edition.edition_id),
-        escape(&edition.edition_id),
-        adjacent(previous, "prev", "←"),
-        adjacent(next, "next", "→"),
-        escape(&work.canonical.version),
-        work.canonical.schema_version
+        "{navigation}\n<main><article class=\"book\"><header class=\"book-header\"><p class=\"eyebrow\">Canonical output · {engine}</p><h1 lang=\"ja\">{title}</h1><p class=\"reading\" lang=\"ja\">{reading}</p><div class=\"contributors\">{contributors}</div></header><section class=\"text-section\" aria-labelledby=\"text-heading\"><h2 id=\"text-heading\">Text</h2><div class=\"reader aozora-notation\" lang=\"ja\">{text}</div></section><section class=\"source-information\"><h2>Diagnostics</h2>{diagnostics}</section><section class=\"source-information\"><h2>Rights and sources</h2>{rights}<ul class=\"source-links\"><li><a href=\"{card_url}\">Aozora Bunko work card</a></li><li><a href=\"{archive_url}\">Official text ZIP</a></li><li><a href=\"../sources/{edition_id}.txt\" download>Verified UTF-8 source</a></li><li><a href=\"../reports/{edition_id}.json\">Distribution comparison report</a></li><li><a href=\"https://www.aozora.gr.jp/guide/kijyunn.html\">File handling policy</a></li></ul></section></article><nav class=\"work-navigation\" aria-label=\"Edition navigation\">{previous}<a href=\"../index.html\">All editions</a>{next}</nav></main><footer class=\"site-footer\"><p>aozora {version} · schema {schema}</p><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
+        navigation = navigation("../"),
+        engine = work.canonical_engine,
+        title = escape(&edition.title),
+        reading = escape(&edition.reading),
+        text = work.canonical.html,
+        rights = rights(edition),
+        card_url = escape(&edition.card_url),
+        archive_url = escape(&edition.archive_url),
+        edition_id = escape(&edition.edition_id),
+        previous = adjacent(previous, "prev", "←"),
+        next = adjacent(next, "next", "→"),
+        version = escape(&work.canonical.version),
+        schema = work.canonical.schema_version,
     );
     shell(
-        &format!("{} — aozora verification lab", edition.title),
-        &format!(
-            "{}をaozoraで変換し配布面を比較した非公式の検証結果です。",
-            edition.title
-        ),
+        &edition.title,
+        Some("ja"),
+        "Static verification result for an Aozora Bunko edition.",
         "../",
         &body,
     )
 }
 
-fn grouped_page(title: &str, groups: &BTreeMap<String, Vec<Edition>>) -> String {
+fn grouped_page(
+    title: &str,
+    groups: &BTreeMap<String, Vec<Edition>>,
+    japanese_group_names: bool,
+) -> String {
     let sections = groups
         .iter()
         .map(|(name, editions)| {
+            let language = if japanese_group_names {
+                " lang=\"ja\""
+            } else {
+                ""
+            };
             format!(
-                "<section><div class=\"section-heading\"><h2>{}</h2><span>{}</span></div><ol class=\"work-grid\">{}</ol></section>",
+                "<section><div class=\"section-heading\"><h2{language}>{}</h2><span>{} editions</span></div><ol class=\"work-grid\">{}</ol></section>",
                 escape(name),
                 editions.len(),
                 work_cards(editions, "../../")
@@ -239,12 +254,13 @@ fn grouped_page(title: &str, groups: &BTreeMap<String, Vec<Edition>>) -> String 
         .collect::<Vec<_>>()
         .join("\n");
     let body = format!(
-        "{}<main class=\"index-main\"><section class=\"hero\"><p class=\"eyebrow\">static index</p><h1>{}</h1></section>{sections}</main><footer class=\"site-footer\"><p>非公式の検証サイトです。</p></footer>",
+        "{}<main class=\"index-main\"><h1 class=\"index-title\">{}</h1>{sections}</main><footer class=\"site-footer\"><p>Texts and bibliographic data: <a href=\"https://www.aozora.gr.jp/\">Aozora Bunko</a></p></footer>",
         navigation("../../"),
         escape(title)
     );
     shell(
         &format!("{title} — aozora verification lab"),
+        None,
         title,
         "../../",
         &body,
@@ -254,22 +270,22 @@ fn grouped_page(title: &str, groups: &BTreeMap<String, Vec<Edition>>) -> String 
 fn gojuon(reading: &str) -> &'static str {
     let first = reading.chars().next().unwrap_or('他');
     for (characters, row) in [
-        ("あいうえおぁぃぅぇぉ", "あ行"),
-        ("かきくけこがぎぐげご", "か行"),
-        ("さしすせそざじずぜぞ", "さ行"),
-        ("たちつてとだぢづでどっ", "た行"),
-        ("なにぬねの", "な行"),
-        ("はひふへほばびぶべぼぱぴぷぺぽ", "は行"),
-        ("まみむめも", "ま行"),
-        ("やゆよゃゅょ", "や行"),
-        ("らりるれろ", "ら行"),
-        ("わをん", "わ行"),
+        ("あいうえおぁぃぅぇぉ", "A row"),
+        ("かきくけこがぎぐげご", "Ka row"),
+        ("さしすせそざじずぜぞ", "Sa row"),
+        ("たちつてとだぢづでどっ", "Ta row"),
+        ("なにぬねの", "Na row"),
+        ("はひふへほばびぶべぼぱぴぷぺぽ", "Ha row"),
+        ("まみむめも", "Ma row"),
+        ("やゆよゃゅょ", "Ya row"),
+        ("らりるれろ", "Ra row"),
+        ("わをん", "Wa row"),
     ] {
         if characters.contains(first) {
             return row;
         }
     }
-    "その他"
+    "Other"
 }
 
 fn copy_static(root: &Path, staging: &Path) -> Result<()> {
@@ -428,11 +444,11 @@ fn write_site(
     }
     fs::write(
         staging.join("indexes/authors/index.html"),
-        grouped_page("著者索引", &authors),
+        grouped_page("Authors", &authors, true),
     )?;
     fs::write(
         staging.join("indexes/gojuon/index.html"),
-        grouped_page("五十音索引", &readings),
+        grouped_page("Kana index", &readings, false),
     )?;
     Ok(())
 }
@@ -581,7 +597,7 @@ mod tests {
     use anyhow::Result;
     use tempfile::tempdir;
 
-    use super::{BuildOptions, DEFAULT_SIZE_LIMIT, build};
+    use super::{BuildOptions, DEFAULT_SIZE_LIMIT, build, gojuon};
     use crate::artifacts::sha256;
     use crate::model::EngineSelector;
 
@@ -635,11 +651,40 @@ mod tests {
                 .count(),
             10
         );
-        assert!(
-            fs::read_to_string(first.join("index.html"))?
-                .find("<script")
-                .is_none()
-        );
+        let index = fs::read_to_string(first.join("index.html"))?;
+        assert!(!index.contains("<script"));
+        assert!(index.contains("<html lang=\"en\">"));
+        assert!(index.contains(">Authors</a>"));
+        assert!(index.contains(">Kana index</a>"));
+        assert!(index.contains(">Editions</h1>"));
+        assert!(index.contains(">All editions</h2>"));
+        assert!(index.contains(">Build report</a>"));
+        assert!(index.contains("<strong lang=\"ja\">"));
+        assert!(!index.contains("class=\"hero\""));
+        assert!(!index.contains("class=\"about\""));
+        assert!(!index.contains("収録版"));
+
+        let Some(work_name) = first_hashes
+            .keys()
+            .find(|name| name.starts_with("works/") && name.ends_with(".html"))
+        else {
+            anyhow::bail!("generated site lacks a work page");
+        };
+        let work = fs::read_to_string(first.join(work_name))?;
+        assert!(work.contains("<html lang=\"en\">"));
+        assert!(work.contains("<title lang=\"ja\">"));
+        assert!(work.contains("<h1 lang=\"ja\">"));
+        assert!(work.contains("<div class=\"reader aozora-notation\" lang=\"ja\">"));
+        assert!(work.contains(">Text</h2>"));
+        assert!(work.contains(">Diagnostics</h2>"));
+        assert!(work.contains(">Rights and sources</h2>"));
+        assert!(work.contains(">All editions</a>"));
+        assert!(!work.contains("class=\"ornament\""));
+        assert!(!work.contains("aria-label=\"本文\""));
+
+        assert_eq!(gojuon("あいびき"), "A row");
+        assert_eq!(gojuon("くものいと"), "Ka row");
+        assert_eq!(gojuon(""), "Other");
 
         let sentinel = temporary.path().join("preserved");
         fs::create_dir(&sentinel)?;
