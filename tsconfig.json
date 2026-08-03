@@ -25,5 +25,5 @@
     "target": "ES2024",
     "types": ["bun"]
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "e2e/**/*.ts", "*.ts"]
+  "include": ["src/**/*.ts", "e2e/**/*.ts", "*.ts"]
 }

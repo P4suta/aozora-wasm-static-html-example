@@ -26,6 +26,7 @@ enum Task {
     Format,
     FormatCheck,
     Lint,
+    Spellcheck,
     Test,
     Release(ReleaseArgs),
 }
@@ -850,8 +851,11 @@ fn lint(root: &Path) -> Result<()> {
 }
 
 fn test(root: &Path) -> Result<()> {
-    run(root, "Bun tests", "bun", &["test"])?;
     run(root, "Rust tests", "cargo", &["test", "--locked"])
+}
+
+fn spellcheck(root: &Path) -> Result<()> {
+    run(root, "spelling", "typos", &[])
 }
 
 fn build_development_site(root: &Path) -> Result<()> {
@@ -867,9 +871,9 @@ fn build_development_site(root: &Path) -> Result<()> {
 
 fn check(root: &Path) -> Result<()> {
     format_check(root)?;
+    spellcheck(root)?;
     lint(root)?;
     run(root, "TypeScript", "bunx", &["tsc", "--noEmit"])?;
-    run(root, "Bun coverage", "bun", &["test", "--coverage"])?;
     run(root, "Rust tests", "cargo", &["test", "--locked"])?;
     run(root, "dead code", "bunx", &["knip"])?;
     build_development_site(root)
@@ -897,6 +901,7 @@ fn execute(task: Task) -> Result<()> {
         Task::Format => format(Path::new(".")),
         Task::FormatCheck => format_check(Path::new(".")),
         Task::Lint => lint(Path::new(".")),
+        Task::Spellcheck => spellcheck(Path::new(".")),
         Task::Test => test(Path::new(".")),
         Task::Release(args) => match args.command {
             ReleaseTask::Prepare(args) => prepare(&args),

@@ -1,6 +1,9 @@
 # Rights corpus manifest v1
 
-正式公開で受け付けるmanifestはUTF-8 JSONで、unknown fieldを拒否します。`corpus.commit`、各entryの `upstreamCommit`、実験場のcommitは40桁SHAで固定し、moving branchを参照しません。
+Consumers receive a UTF-8 `manifest.json` and the UTF-8 text file named by each entry. Unknown JSON
+fields are rejected. Every commit is a lowercase 40-character SHA, not a branch or tag.
+
+## Schema
 
 ```json
 {
@@ -35,16 +38,18 @@
 }
 ```
 
-`editionId` のsuffixは `SHA-256(workId + "\n" + archiveUrl)` の先頭16桁です。これにより作品IDとテキストZIP URLの組を版identityにします。
+`editionId` ends with the first 16 characters of `SHA-256(workId + "\n" + archiveUrl)`.
 
-consumer validatorは次をfail-closedで検査します。
+## Failure conditions
 
-- 作品と全関係者のflagが `なし`
-- 初出原文と解析年が空でない
-- 全解析年が1000年以上かつcutoff以下
-- `cutoffYear = referenceDateの年 - 96`
-- 公式HTTPS card/ZIP URLと安全な `.txt` filename
-- corpus/entry commit一致、重複edition/identity、全SHA-256
-- source読込時のUTF-8、U+FFFD、UTF-8本文hash
+Consumers reject the corpus when:
 
-初出文字列の和暦・連載年・曖昧表記の解析とCSV/ZIP変換はcorpus generator側の責務です。解析不能な版はentryへ入れず、理由付き隔離manifestへ出します。作品別allowlistは使用しません。
+- a work or contributor `copyright` value is not `なし`;
+- publication text or parsed years are missing, or a year is below 1000 or above `cutoffYear`;
+- `cutoffYear` is not the `referenceDate` year minus 96;
+- a card URL, ZIP URL, or `.txt` filename is unsafe;
+- corpus and entry commits differ, an edition or identity is duplicated, or a hash differs; or
+- a text file is invalid UTF-8, contains U+FFFD, or does not match `utf8Sha256`.
+
+The corpus generator parses Japanese era dates and ambiguous publication strings. Unparsable
+editions go to a quarantine manifest with a reason; per-work allowlists are not supported.
