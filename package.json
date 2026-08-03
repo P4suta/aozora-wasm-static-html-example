@@ -40,9 +40,9 @@
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
     "@biomejs/biome": "2.5.6",
-    "@playwright/test": "1.62.0",
+    "@playwright/test": "1.62.1",
     "@types/bun": "1.3.14",
-    "knip": "6.29.0",
+    "knip": "6.30.0",
     "sirv-cli": "3.0.1",
     "typescript": "7.0.2"
   }
