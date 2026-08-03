@@ -134,13 +134,13 @@ jobs:
           path: aozora
           fetch-depth: 1
           persist-credentials: false
+      - name: Stage the release inputs for the upstream action
+        run: cp aozora/.github/release-inputs.env .github/release-inputs.env
       - uses: ./aozora/.github/actions/load-release-inputs
-        with:
-          env-file: aozora/.github/release-inputs.env
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ env.AOZORA_REAL_WORK_CORPUS_REPOSITORY }}
-          ref: ${{ env.AOZORA_REAL_WORK_CORPUS_SHA }}
+          repository: ${{ env.AOZORA_CORPUS_REPOSITORY }}
+          ref: ${{ env.AOZORA_CORPUS_SHA }}
           path: corpus
           fetch-depth: 1
           persist-credentials: false
@@ -152,7 +152,7 @@ jobs:
           cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
             -p aozora-xtask -- real-work corpus \
             --checkout corpus \
-            --expected-commit "$AOZORA_REAL_WORK_CORPUS_SHA" \
+            --expected-commit "$AOZORA_CORPUS_SHA" \
             --out _stable/inputs/corpus.tar
           cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
             -p aozora-xtask -- real-work baselines \
