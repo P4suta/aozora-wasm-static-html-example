@@ -13,7 +13,7 @@
     "url": "https://github.com/P4suta/aozora-wasm-static-html-example/issues"
   },
   "type": "module",
-  "packageManager": "bun@1.3.14",
+  "packageManager": "bun@1.4.2",
   "engines": {
     "bun": ">=1.3.14"
   },
@@ -38,12 +38,12 @@
     "aozora-wasm": "0.5.0"
   },
   "devDependencies": {
-    "@axe-core/playwright": "4.12.1",
-    "@biomejs/biome": "2.5.6",
-    "@playwright/test": "1.62.1",
-    "@types/bun": "1.3.14",
-    "knip": "6.30.0",
-    "playwright-core": "1.62.1",
+    "@axe-core/playwright": "4.13.0",
+    "@biomejs/biome": "2.5.15",
+    "@playwright/test": "1.63.0",
+    "@types/bun": "1.4.2",
+    "knip": "6.39.0",
+    "playwright-core": "1.63.0",
     "sirv-cli": "3.0.1",
     "typescript": "7.0.2"
   }
