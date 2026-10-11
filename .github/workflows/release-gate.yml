@@ -93,15 +93,15 @@ jobs:
           ref: ${{ inputs.lab_commit }}
           path: lab
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.corpus_artifact }}
           path: lab/_inputs/corpus
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.diagnostics_artifact }}
           path: lab/_inputs/diagnostics
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ format('{0}-{1}', inputs.candidate_artifact_prefix, matrix.platform) }}
           path: lab/_inputs/candidate
@@ -120,7 +120,7 @@ jobs:
       - name: Verify every distribution against real works
         working-directory: lab
         run: cargo run --quiet --locked --bin xtask -- release verify --platform ${{ matrix.platform }} --shard ${{ matrix.shard }}/4
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: real-work-report-${{ matrix.platform }}-${{ matrix.shard }}
@@ -142,23 +142,23 @@ jobs:
           ref: ${{ inputs.lab_commit }}
           path: lab
           persist-credentials: false
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.corpus_artifact }}
           path: lab/_inputs/corpus
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.diagnostics_artifact }}
           path: lab/_inputs/diagnostics
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ format('{0}-linux', inputs.candidate_artifact_prefix) }}
           path: lab/_inputs/candidate
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: ${{ inputs.baseline_artifact }}
           path: lab/_inputs/baseline
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         if: inputs.approval_artifact != ''
         with:
           name: ${{ inputs.approval_artifact }}
@@ -184,14 +184,14 @@ jobs:
       - name: Compare every work in all browsers
         working-directory: lab
         run: cargo run --quiet --locked --bin xtask -- release visual
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: real-work-visual-${{ github.sha }}
           path: lab/visual-report
           if-no-files-found: error
           retention-days: 30
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: aozora-pages-candidate-${{ github.sha }}
           path: lab/candidate-site
