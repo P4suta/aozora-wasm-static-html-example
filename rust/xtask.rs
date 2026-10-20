@@ -12,6 +12,8 @@ use aozora_lab::verify::{self, VerifyOptions};
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use sha2::{Digest, Sha256};
 
+const CRATES_IO_API_BASE: &str = "https://crates.io/api/v1/crates";
+
 #[derive(Debug, Parser)]
 #[command(name = "xtask", about = "Repository and release orchestration")]
 struct Cli {
@@ -323,10 +325,7 @@ fn stable_resolve(args: &StableResolveArgs) -> Result<()> {
     }
 
     let crate_metadata = curl_json(
-        &format!(
-            "https://crates.io/api/v1/crates/{}/{version}",
-            args.crate_name
-        ),
+        &format!("{CRATES_IO_API_BASE}/{}/{version}", args.crate_name),
         "resolve crates.io release",
     )?;
     if crate_metadata
@@ -532,7 +531,7 @@ fn stable_fetch(args: &StableFetchArgs) -> Result<()> {
     verify_checksum(&release, "aozora-go.tar.gz")?;
     verify_checksum(&native, &native_archive)?;
     let crate_metadata = curl_json(
-        &format!("https://crates.io/api/v1/crates/aozora/{}", args.version),
+        &format!("{CRATES_IO_API_BASE}/aozora/{}", args.version),
         "read stable crate checksum",
     )?;
     let expected = crate_metadata
