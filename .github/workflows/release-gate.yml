@@ -35,7 +35,7 @@ on:
     outputs:
       pages_artifact:
         description: Candidate static site artifact produced after every gate passes
-        value: ${{ jobs.visual.outputs.pages_artifact }}
+        value: ${{ jobs.visual.outputs.pages-artifact }}
 
 permissions:
   actions: read
