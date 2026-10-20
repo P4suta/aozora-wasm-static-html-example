@@ -1,8 +1,6 @@
 name: stable channel
 
 on:
-  schedule:
-    - cron: "17 18 * * 1"
   workflow_dispatch:
 
 permissions:
@@ -35,7 +33,7 @@ jobs:
         name: Require one version across GitHub, npm, crates.io, and PyPI
         env:
           GH_TOKEN: ${{ github.token }}
-        run: cargo +1.97.1 run --quiet --locked --bin xtask -- release stable-resolve
+        run: cargo run --quiet --locked --bin xtask -- release stable-resolve
 
   candidates:
     needs: resolve
@@ -66,14 +64,11 @@ jobs:
           path: aozora
           fetch-depth: 1
           persist-credentials: false
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
         with:
           version: 2026.10.11
           cache: true
           install_args: go
-      - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
-        with:
-          toolchain: "1.99.1"
       - uses: dtolnay/rust-toolchain@2c7215f132e9ebf062739d9130488b56d53c060c # master
         with:
           toolchain: "1.99.1"
@@ -91,21 +86,26 @@ jobs:
       - name: Fetch immutable public distributions
         env:
           GH_TOKEN: ${{ github.token }}
+          STABLE_TAG: ${{ needs.resolve.outputs.tag }}
+          STABLE_VERSION: ${{ needs.resolve.outputs.version }}
         run: >-
-          cargo +1.97.1 run --quiet --locked --bin xtask -- release stable-fetch
-          --tag ${{ needs.resolve.outputs.tag }}
-          --version ${{ needs.resolve.outputs.version }}
+          cargo run --quiet --locked --bin xtask -- release stable-fetch
+          --tag "$STABLE_TAG"
+          --version "$STABLE_VERSION"
           --platform ${{ matrix.platform }}
           --out-dir _stable/distributions
       - name: Build the released Extism host and assemble the bundle
+        env:
+          STABLE_COMMIT: ${{ needs.resolve.outputs.commit }}
+          STABLE_VERSION: ${{ needs.resolve.outputs.version }}
         run: |
-          cargo +1.97.0 build --locked --release --manifest-path aozora/Cargo.toml \
+          cargo build --locked --release --manifest-path aozora/Cargo.toml \
             -p aozora-extism --features host-smoke --bin aozora-real-work-extism
-          cargo +1.97.0 run --locked --release --manifest-path aozora/Cargo.toml \
+          cargo run --locked --release --manifest-path aozora/Cargo.toml \
             -p aozora-xtask -- real-work bundle \
             --platform ${{ matrix.platform }} \
-            --commit ${{ needs.resolve.outputs.commit }} \
-            --version ${{ needs.resolve.outputs.version }} \
+            --commit "$STABLE_COMMIT" \
+            --version "$STABLE_VERSION" \
             --release-dir _stable/distributions/release \
             --native-dir _stable/distributions/native \
             --python-dir _stable/distributions/python \
@@ -149,12 +149,12 @@ jobs:
           toolchain: "1.99.1"
       - name: Pack the released baseline and its pinned corpus
         run: |
-          cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
+          cargo run --locked --manifest-path aozora/Cargo.toml \
             -p aozora-xtask -- real-work corpus \
             --checkout corpus \
             --expected-commit "$AOZORA_CORPUS_SHA" \
             --out _stable/inputs/corpus.tar
-          cargo +1.97.0 run --locked --manifest-path aozora/Cargo.toml \
+          cargo run --locked --manifest-path aozora/Cargo.toml \
             -p aozora-xtask -- real-work baselines \
             --diagnostics aozora/.github/real-work/diagnostics-baseline.json \
             --site aozora/.github/real-work/site \

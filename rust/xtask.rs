@@ -29,7 +29,7 @@ enum Task {
     Lint,
     Spellcheck,
     Test,
-    Release(ReleaseArgs),
+    Release(Box<ReleaseArgs>),
 }
 
 #[derive(Debug, Args)]

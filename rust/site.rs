@@ -567,7 +567,7 @@ pub fn build(
 mod tests {
     use std::collections::BTreeMap;
     use std::fs;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     use anyhow::Result;
     use tempfile::tempdir;
@@ -576,7 +576,7 @@ mod tests {
     use crate::artifacts::sha256;
     use crate::model::{Diagnostic, EngineSelector, Span};
 
-    fn hashes(path: &Path, prefix: &Path, result: &mut BTreeMap<String, String>) -> Result<()> {
+    fn hashes(path: &Path, prefix: &Path, result: &mut BTreeMap<PathBuf, String>) -> Result<()> {
         let mut entries = fs::read_dir(path)?.collect::<std::io::Result<Vec<_>>>()?;
         entries.sort_by_key(std::fs::DirEntry::file_name);
         for entry in entries {
@@ -585,7 +585,7 @@ mod tests {
                 hashes(&child, prefix, result)?;
             } else {
                 result.insert(
-                    child.strip_prefix(prefix)?.to_string_lossy().into_owned(),
+                    child.strip_prefix(prefix)?.to_path_buf(),
                     sha256(fs::read(child)?),
                 );
             }
@@ -622,7 +622,7 @@ mod tests {
         assert_eq!(
             first_hashes
                 .keys()
-                .filter(|name| name.starts_with("works/"))
+                .filter(|name| name.starts_with("works"))
                 .count(),
             10
         );
@@ -643,10 +643,12 @@ mod tests {
         assert!(!index.contains("class=\"about\""));
         assert!(!index.contains("収録版"));
 
-        let Some(work_name) = first_hashes
-            .keys()
-            .find(|name| name.starts_with("works/") && name.ends_with(".html"))
-        else {
+        let Some(work_name) = first_hashes.keys().find(|name| {
+            name.starts_with("works")
+                && name
+                    .extension()
+                    .is_some_and(|extension| extension == "html")
+        }) else {
             anyhow::bail!("generated site lacks a work page");
         };
         let work = fs::read_to_string(first.join(work_name))?;
