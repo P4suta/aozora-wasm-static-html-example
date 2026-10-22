@@ -1,6 +1,6 @@
 {
   "name": "aozora-wasm-static-html-example",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Deterministic static HTML5 library generated from Aozora Bunko notation with aozora-wasm",
   "private": true,
   "license": "Apache-2.0 OR MIT",
