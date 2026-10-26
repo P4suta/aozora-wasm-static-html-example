@@ -6,7 +6,7 @@ Standard output is reserved for protocol frames; logs go to standard error.
 ## Request
 
 ```json
-{"protocolVersion":1,"requestId":"wasm-0","operation":"render","source":"本文"}
+{ "protocolVersion": 1, "requestId": "wasm-0", "operation": "render", "source": "本文" }
 ```
 
 ## Responses
@@ -35,7 +35,7 @@ Success:
 Failure:
 
 ```json
-{"protocolVersion":1,"requestId":"wasm-0","ok":false,"error":"message"}
+{ "protocolVersion": 1, "requestId": "wasm-0", "ok": false, "error": "message" }
 ```
 
 All objects reject unknown fields. A span is a half-open byte range:

@@ -9,17 +9,17 @@ bun install --frozen-lockfile
 bun run ci
 ```
 
-| Command | Purpose |
-| --- | --- |
-| `bun run check` | Check source, tests, and interfaces. |
-| `bun run lab` | Run the default deterministic WASM check. |
-| `bun run lab doctor --engine all` | Check host tools, workers, artifacts, and hashes. |
-| `bun run lab verify --engine wasm --scope quick` | Verify a minimal feature-covering corpus. |
+| Command                                                    | Purpose                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------- |
+| `bun run check`                                            | Check source, tests, and interfaces.                    |
+| `bun run lab`                                              | Run the default deterministic WASM check.               |
+| `bun run lab doctor --engine all`                          | Check host tools, workers, artifacts, and hashes.       |
+| `bun run lab verify --engine wasm --scope quick`           | Verify a minimal feature-covering corpus.               |
 | `bun run lab verify --engine all --scope full --shard 0/4` | Verify one full-corpus shard across every distribution. |
-| `bun run lab build --engine wasm` | Verify and build the static site. |
-| `bun run lab visual --baseline PATH --candidate PATH` | Compare browser output and layout. |
-| `bun run lab full --baseline PATH --corpus PATH` | Run the complete rights-filtered corpus gate. |
-| `bun run spellcheck` | Check spelling with Typos. |
+| `bun run lab build --engine wasm`                          | Verify and build the static site.                       |
+| `bun run lab visual --baseline PATH --candidate PATH`      | Compare browser output and layout.                      |
+| `bun run lab full --baseline PATH --corpus PATH`           | Run the complete rights-filtered corpus gate.           |
+| `bun run spellcheck`                                       | Check spelling with Typos.                              |
 
 The versioned interfaces are [the rights corpus manifest](docs/corpus-manifest-v1.md) and [the worker protocol](docs/worker-protocol-v1.md).
 
