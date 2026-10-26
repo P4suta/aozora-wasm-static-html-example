@@ -43,7 +43,6 @@ fields are rejected. Every commit is a lowercase 40-character SHA, not a branch 
 ## Failure conditions
 
 Consumers reject the corpus when:
-
 - a work or contributor `copyright` value is not `なし`;
 - publication text or parsed years are missing, or a year is below 1000 or above `cutoffYear`;
 - `cutoffYear` is not the `referenceDate` year minus 96;
