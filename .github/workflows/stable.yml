@@ -27,7 +27,7 @@ jobs:
           toolchain: "1.99.1"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.2"
           registry-url: https://registry.npmjs.org
       - id: release
         name: Require one version across GitHub, npm, crates.io, and PyPI
@@ -64,9 +64,9 @@ jobs:
           path: aozora
           fetch-depth: 1
           persist-credentials: false
-      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
         with:
-          version: 2026.10.17
+          version: 2026.10.23
           cache: true
           install_args: go
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
@@ -74,7 +74,7 @@ jobs:
           toolchain: "1.99.1"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.22.1"
+          node-version: "24.22.2"
           registry-url: https://registry.npmjs.org
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
