@@ -24,10 +24,10 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
-          toolchain: "1.99.1"
+          toolchain: "1.100.0"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.22.2"
+          node-version: "24.22.3"
           registry-url: https://registry.npmjs.org
       - id: release
         name: Require one version across GitHub, npm, crates.io, and PyPI
@@ -64,17 +64,17 @@ jobs:
           path: aozora
           fetch-depth: 1
           persist-credentials: false
-      - uses: jdx/mise-action@6be3c7ed4c21d4f76b208d351d95aac273ebb76d # v5.2.4
+      - uses: jdx/mise-action@236a21c3b91f5db6d4e174b348674a0f0caac06d # v5.2.9
         with:
-          version: 2026.10.23
+          version: 2026.11.9
           cache: true
           install_args: go
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
-          toolchain: "1.99.1"
+          toolchain: "1.100.0"
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "24.22.2"
+          node-version: "24.22.3"
           registry-url: https://registry.npmjs.org
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
@@ -146,7 +146,7 @@ jobs:
           persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
         with:
-          toolchain: "1.99.1"
+          toolchain: "1.100.0"
       - name: Pack the released baseline and its pinned corpus
         run: |
           cargo run --locked --manifest-path aozora/Cargo.toml \
